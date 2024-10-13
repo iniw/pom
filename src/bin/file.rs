@@ -14,6 +14,22 @@ fn main() {
         };
 
         let mut lexer = pom::lex::Lexer::new(&src);
-        dbg!(lexer.lex());
+        let (tokens, errors) = lexer.lex();
+
+        if !errors.is_empty() {
+            eprintln!("Lexing errors");
+            for e in errors {
+                eprintln!("  - {}", e.render(&src))
+            }
+            eprintln!();
+        }
+
+        if !tokens.is_empty() {
+            eprintln!("Tokens");
+            for t in tokens {
+                eprintln!("  - {}", t.render(&src))
+            }
+            eprintln!();
+        }
     }
 }
