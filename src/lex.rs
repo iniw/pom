@@ -69,21 +69,32 @@ impl<'src> Lexer<'src> {
             }
 
             // Numbers
-            '0'..='9' => Ok(Some(Token::Number(
-                self.extend_current_lexeme_while(char::is_ascii_digit),
-            ))),
+            '0'..='9' => {
+                self.extend_current_lexeme_while(char::is_ascii_digit);
+                if self.next_if_eq('.') {
+                    if !self.next_if(char::is_ascii_digit) {
+                        return Err(LexingError::UnterminatedNumericLiteral(
+                            self.current_lexeme_span(),
+                        ));
+                    }
+                    self.extend_current_lexeme_while(char::is_ascii_digit);
+                }
+                Ok(Some(Token::Number(self.current_lexeme())))
+            }
 
             // Others
             '!' => Ok(Some(Token::Bang)),
             '.' => Ok(Some(Token::Dot)),
+
+            // Parenthesis
+            '(' => Ok(Some(Token::LeftParenthesis)),
+            ')' => Ok(Some(Token::RightParenthesis)),
 
             // Pipes
             '|' if self.next_if_eq('|') => Ok(Some(Token::PipePipe)),
             '|' => Ok(Some(Token::Pipe)),
 
             // Whitespace
-            // FIXME: Throw `UnterminatedNumericLiteral` when reaching whitespace after lexing a
-            // number followed by a dot.
             ' ' | '\t' | '\n' | '\r' | '\x0C' => Ok(None),
 
             _ => Err(LexingError::UnknownToken(self.current_lexeme_span())),
@@ -114,7 +125,6 @@ impl<'src> Lexer<'src> {
         &self.source_code[self.current_lexeme_start..self.current_lexeme_end()]
     }
 
-    #[expect(dead_code)]
     fn next_if(&mut self, f: impl Fn(&char) -> bool) -> bool {
         self.source.next_if(|(_, next)| f(next)).is_some()
     }
@@ -154,6 +164,10 @@ pub enum Token<'src> {
     // Others
     Bang,
     Dot,
+
+    // Parenthesis
+    LeftParenthesis,
+    RightParenthesis,
 
     // Pipes
     Pipe,
@@ -212,7 +226,6 @@ impl<T> Spanned<T> {
 pub enum LexingError {
     UnknownToken(Span),
     UnterminatedNumericLiteral(Span),
-    InvalidNumericLiteral(Span, <u64 as std::str::FromStr>::Err),
 }
 
 impl LexingError {
@@ -223,13 +236,6 @@ impl LexingError {
             }
             LexingError::UnterminatedNumericLiteral(span) => {
                 format!("Unterminated numeric literal {}", span.render(source_code))
-            }
-            LexingError::InvalidNumericLiteral(span, err) => {
-                format!(
-                    "Invalid numeric literal {} ({})",
-                    span.render(source_code),
-                    err
-                )
             }
         }
     }
