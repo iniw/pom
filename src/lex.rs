@@ -222,8 +222,8 @@ impl Span {
 
 #[derive(Debug, Copy, Clone)]
 pub struct Spanned<T> {
-    data: T,
-    span: Span,
+    pub data: T,
+    pub span: Span,
 }
 
 impl<T> Spanned<T> {
