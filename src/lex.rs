@@ -45,6 +45,12 @@ impl<'src> Lexer<'src> {
             '&' if self.next_if_eq('&') => Ok(Some(Token::AmpersandAmpersand)),
             '&' => Ok(Some(Token::Ampersand)),
 
+            // Arithmetic
+            '+' => Ok(Some(Token::Add)),
+            '-' => Ok(Some(Token::Sub)),
+            '/' => Ok(Some(Token::Div)),
+            '*' => Ok(Some(Token::Mul)),
+
             // Braces
             '{' => Ok(Some(Token::LeftBrace)),
             '}' => Ok(Some(Token::RightBrace)),
@@ -140,6 +146,12 @@ pub enum Token<'src> {
     // Ampersands
     Ampersand,
     AmpersandAmpersand,
+
+    // Arithmetic
+    Add,
+    Sub,
+    Div,
+    Mul,
 
     // Braces
     LeftBrace,
