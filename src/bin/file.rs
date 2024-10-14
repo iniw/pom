@@ -13,7 +13,7 @@ fn main() {
             continue;
         };
 
-        let mut lexer = pom::lex::Lexer::new(&src);
+        let lexer = pom::lex::Lexer::new(&src);
         let (tokens, errors) = lexer.lex();
 
         if !errors.is_empty() {
@@ -26,8 +26,27 @@ fn main() {
 
         if !tokens.is_empty() {
             eprintln!("Tokens");
-            for t in tokens {
+            for t in &tokens {
                 eprintln!("  - {}", t.render(&src))
+            }
+            eprintln!();
+        }
+
+        let parser = pom::syn::Parser::new(tokens);
+        let (statements, errors) = parser.parse();
+
+        if !errors.is_empty() {
+            eprintln!("Parsing errors");
+            for e in errors {
+                dbg!(e);
+            }
+            eprintln!();
+        }
+
+        if !statements.is_empty() {
+            eprintln!("Statements");
+            for s in &statements {
+                dbg!(s);
             }
             eprintln!();
         }
