@@ -15,7 +15,8 @@ impl<'src> Lexer<'src> {
             current_lexeme_start: 0,
         }
     }
-    pub fn lex(&mut self) -> (Vec<Spanned<Token>>, Vec<LexingError>) {
+
+    pub fn lex(mut self) -> (Vec<Spanned<Token<'src>>>, Vec<LexingError>) {
         let mut tokens = Vec::new();
         let mut errors = Vec::new();
 
