@@ -35,11 +35,6 @@ impl<'src> Lexer<'src> {
             }
         }
 
-        tokens.push(Spanned::<Token> {
-            data: Token::EndOfFile,
-            span: Span::eof_for(self.source_code),
-        });
-
         (tokens, errors)
     }
 
@@ -163,8 +158,6 @@ pub enum Token<'src> {
     // Pipes
     Pipe,
     PipePipe,
-
-    EndOfFile,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -174,13 +167,6 @@ pub struct Span {
 }
 
 impl Span {
-    fn eof_for(source_code: &str) -> Self {
-        Self {
-            start: source_code.len(),
-            end: source_code.len(),
-        }
-    }
-
     fn line(&self, source_code: &str) -> usize {
         source_code[..=self.start].lines().count()
     }
@@ -198,16 +184,12 @@ impl Span {
     }
 
     pub fn render(&self, source_code: &str) -> String {
-        if *self == Self::eof_for(source_code) {
-            "<EOF>".to_owned()
-        } else {
-            format!(
-                "'{}' @ {}:{}",
-                self.lexeme(source_code),
-                self.line(source_code),
-                self.column(source_code)
-            )
-        }
+        format!(
+            "'{}' @ {}:{}",
+            self.lexeme(source_code),
+            self.line(source_code),
+            self.column(source_code)
+        )
     }
 }
 
