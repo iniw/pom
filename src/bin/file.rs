@@ -19,7 +19,7 @@ fn main() {
         let (tokens, errors) = lexer.lex();
 
         if !errors.is_empty() {
-            eprintln!("Lexing errors");
+            eprintln!("Lexing errors:");
             for e in errors {
                 eprintln!("  - {}", e.render(&src))
             }
@@ -27,7 +27,7 @@ fn main() {
         }
 
         if !tokens.is_empty() {
-            eprintln!("Tokens");
+            eprintln!("Tokens:");
             for t in &tokens {
                 eprintln!("  - {}", t.render(&src))
             }
@@ -35,11 +35,37 @@ fn main() {
         }
 
         let parser = syn::Parser::new(tokens);
-        let result = parser.parse();
-        dbg!(&result);
+        let (stmts, exprs, errors) = parser.parse();
+
+        if !stmts.is_empty() {
+            eprintln!("Statements:");
+            for s in &stmts {
+                eprintln!("  - {:?}", stmts.get(s))
+            }
+            eprintln!();
+        }
+
+        if !exprs.is_empty() {
+            eprintln!("Expressions:");
+            for e in &exprs {
+                eprintln!("  - {:?}", exprs.get(e))
+            }
+            eprintln!();
+        }
+
+        if !errors.is_empty() {
+            eprintln!("Syntax errors:");
+            for e in &errors {
+                eprintln!("  - {:?}", e)
+            }
+            eprintln!();
+
+            // Don't evaluate when there are syntax errors
+            return;
+        }
 
         let mut interpreter = eval::Interpreter::new();
-        let result = interpreter.evaluate(result.0, result.1);
+        let result = interpreter.evaluate(stmts, exprs);
         dbg!(&result);
     }
 }
