@@ -1,6 +1,5 @@
 use std::{iter::Peekable, str::CharIndices};
 
-#[derive(Debug)]
 pub struct Lexer<'src> {
     source_code: &'src str,
     source: Peekable<CharIndices<'src>>,
@@ -16,7 +15,7 @@ impl<'src> Lexer<'src> {
         }
     }
 
-    pub fn lex(mut self) -> (Vec<Spanned<Token<'src>>>, Vec<LexingError>) {
+    pub fn lex(mut self) -> (Vec<Spanned<Token<'src>>>, Vec<Error>) {
         let mut tokens = Vec::new();
         let mut errors = Vec::new();
 
@@ -39,7 +38,7 @@ impl<'src> Lexer<'src> {
         (tokens, errors)
     }
 
-    fn interpret_character(&mut self, character: char) -> Result<Option<Token<'src>>, LexingError> {
+    fn interpret_character(&mut self, character: char) -> Result<Option<Token<'src>>, Error> {
         match character {
             // Ampersands
             '&' if self.next_if_eq('&') => Ok(Some(Token::AmpersandAmpersand)),
@@ -80,9 +79,10 @@ impl<'src> Lexer<'src> {
                 self.extend_current_lexeme_while(char::is_ascii_digit);
                 if self.next_if_eq('.') {
                     if !self.next_if(char::is_ascii_digit) {
-                        return Err(LexingError::UnterminatedNumericLiteral(
-                            self.current_lexeme_span(),
-                        ));
+                        return Err(Error {
+                            kind: ErrorKind::UnterminatedNumericLiteral,
+                            span: self.current_lexeme_span(),
+                        });
                     }
                     self.extend_current_lexeme_while(char::is_ascii_digit);
                 }
@@ -104,7 +104,10 @@ impl<'src> Lexer<'src> {
             // Whitespace
             ' ' | '\t' | '\n' | '\r' | '\x0C' => Ok(None),
 
-            _ => Err(LexingError::UnknownToken(self.current_lexeme_span())),
+            _ => Err(Error {
+                kind: ErrorKind::UnknownToken,
+                span: self.current_lexeme_span(),
+            }),
         }
     }
 
@@ -235,20 +238,29 @@ impl<T> Spanned<T> {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum LexingError {
-    UnknownToken(Span),
-    UnterminatedNumericLiteral(Span),
+#[derive(Debug, Copy, Clone)]
+pub struct Error {
+    kind: ErrorKind,
+    span: Span,
 }
 
-impl LexingError {
+#[derive(Debug, Copy, Clone)]
+pub enum ErrorKind {
+    UnknownToken,
+    UnterminatedNumericLiteral,
+}
+
+impl Error {
     pub fn render(&self, source_code: &str) -> String {
-        match self {
-            LexingError::UnknownToken(span) => {
-                format!("Unknown token {}", span.render(source_code))
+        match self.kind {
+            ErrorKind::UnknownToken => {
+                format!("Unknown token {}", self.span.render(source_code))
             }
-            LexingError::UnterminatedNumericLiteral(span) => {
-                format!("Unterminated numeric literal {}", span.render(source_code))
+            ErrorKind::UnterminatedNumericLiteral => {
+                format!(
+                    "Unterminated numeric literal {}",
+                    self.span.render(source_code)
+                )
             }
         }
     }
