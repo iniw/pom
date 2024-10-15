@@ -40,7 +40,7 @@ fn main() {
         if !stmts.is_empty() {
             eprintln!("Statements:");
             for s in &stmts {
-                eprintln!("  - {:?}", stmts.get(s))
+                eprintln!("  - {:?}", s)
             }
             eprintln!();
         }
@@ -48,7 +48,7 @@ fn main() {
         if !exprs.is_empty() {
             eprintln!("Expressions:");
             for e in &exprs {
-                eprintln!("  - {:?}", exprs.get(e))
+                eprintln!("  - {:?}", e)
             }
             eprintln!();
         }
