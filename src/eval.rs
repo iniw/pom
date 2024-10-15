@@ -12,7 +12,7 @@ impl Interpreter {
     }
 
     pub fn evaluate(&mut self, stmts: Pool<Stmt>, exprs: Pool<Expr>) -> Result<(), RuntimeError> {
-        for stmt in &stmts {
+        for stmt in stmts.handles() {
             self.execute_statement(&stmts, &exprs, stmt)?;
         }
         Ok(())

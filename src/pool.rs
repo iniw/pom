@@ -22,17 +22,30 @@ impl<T> Pool<T> {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
-}
 
-impl<'a, T> IntoIterator for &'a Pool<T> {
-    type Item = Handle<T>;
-    type IntoIter = PoolHandleIter<'a, T>;
-
-    fn into_iter(self) -> Self::IntoIter {
+    pub fn handles(&self) -> PoolHandleIter<T> {
         PoolHandleIter {
             pool: self,
             index: 0,
         }
+    }
+}
+
+impl<T> IntoIterator for Pool<T> {
+    type Item = T;
+    type IntoIter = <Vec<T> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a Pool<T> {
+    type Item = &'a T;
+    type IntoIter = <&'a Vec<T> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
     }
 }
 
