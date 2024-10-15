@@ -1,5 +1,7 @@
 use std::{env, fs, path::PathBuf};
 
+use pom::{eval, lex, syn};
+
 fn main() {
     // Skip the filepath
     let args = env::args().skip(1);
@@ -13,7 +15,7 @@ fn main() {
             continue;
         };
 
-        let lexer = pom::lex::Lexer::new(&src);
+        let lexer = lex::Lexer::new(&src);
         let (tokens, errors) = lexer.lex();
 
         if !errors.is_empty() {
@@ -32,23 +34,12 @@ fn main() {
             eprintln!();
         }
 
-        let parser = pom::syn::Parser::new(tokens);
-        let (statements, errors) = parser.parse();
+        let parser = syn::Parser::new(tokens);
+        let result = parser.parse();
+        dbg!(&result);
 
-        if !errors.is_empty() {
-            eprintln!("Parsing errors");
-            for e in errors {
-                dbg!(e);
-            }
-            eprintln!();
-        }
-
-        if !statements.is_empty() {
-            eprintln!("Statements");
-            for s in &statements {
-                dbg!(s);
-            }
-            eprintln!();
-        }
+        let mut interpreter = eval::Interpreter::new();
+        let result = interpreter.evaluate(result.0, result.1);
+        dbg!(&result);
     }
 }
