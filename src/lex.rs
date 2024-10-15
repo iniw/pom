@@ -126,8 +126,8 @@ impl<'src> Lexer<'src> {
 
     fn current_lexeme_span(&mut self) -> Span {
         Span {
-            start: self.current_lexeme_start,
-            end: self.current_lexeme_end(),
+            start: self.current_lexeme_start as u32,
+            end: self.current_lexeme_end() as u32,
         }
     }
 
@@ -192,25 +192,25 @@ pub enum Token<'src> {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Span {
-    start: usize,
-    end: usize,
+    start: u32,
+    end: u32,
 }
 
 impl Span {
-    fn line(&self, source_code: &str) -> usize {
-        source_code[..=self.start].lines().count()
+    fn line(&self, source_code: &str) -> u32 {
+        source_code[..=self.start as usize].lines().count() as u32
     }
 
-    fn column(&self, source_code: &str) -> usize {
-        if let Some(line) = source_code[..self.start].rfind("\n") {
-            self.start - line
+    fn column(&self, source_code: &str) -> u32 {
+        if let Some(line) = source_code[..self.start as usize].rfind("\n") {
+            self.start - (line as u32)
         } else {
             self.start + 1
         }
     }
 
     fn lexeme<'src>(&self, source_code: &'src str) -> &'src str {
-        &source_code[self.start..self.end]
+        &source_code[self.start as usize..self.end as usize]
     }
 
     pub fn render(&self, source_code: &str) -> String {
