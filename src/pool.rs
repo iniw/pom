@@ -15,10 +15,6 @@ impl<T> Pool<T> {
     pub fn get(&self, handle: Handle<T>) -> &T {
         &self.0[handle.idx as usize]
     }
-
-    pub fn next_handle(&self) -> Handle<T> {
-        Handle::new(self.0.len() as u32)
-    }
 }
 
 impl<'a, T> IntoIterator for &'a Pool<T> {
