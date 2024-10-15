@@ -13,7 +13,7 @@ macro_rules! chase {
             }) {
             ChaseResult::Caught(&ctx.data)
         } else {
-            ChaseResult::Missing($tokens.peek())
+            ChaseResult::Missing($tokens.peek().expect("ICE: Shouldn't reach end of token stream when chasing."))
         }
     }};
 }
@@ -26,7 +26,7 @@ macro_rules! spanned_chase {
             }) {
             SpannedChaseResult::SpannedCaught(&ctx.data, ctx.span)
         } else {
-            SpannedChaseResult::SpannedMissing($tokens.peek())
+            SpannedChaseResult::SpannedMissing($tokens.peek().expect("ICE: Shouldn't reach end of token stream when chasing."))
         }
     }};
 }
@@ -54,7 +54,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>>> Parser<I> {
     }
 
     fn parse_program(&mut self) {
-        while self.tokens.peek().is_some() {
+        while let Missing(_) = chase!(self.tokens, Token::EndOfFile) {
             if let Err(error) = self.parse_statement() {
                 self.errors.push(error);
             }
@@ -136,7 +136,7 @@ pub enum ErrorKind {
 #[expect(dead_code)]
 enum ChaseResult<'syn, 'lex> {
     Caught(&'syn Token<'lex>),
-    Missing(Option<&'syn Spanned<Token<'lex>>>),
+    Missing(&'syn Spanned<Token<'lex>>),
 }
 use ChaseResult::*;
 
@@ -144,6 +144,6 @@ use ChaseResult::*;
 #[expect(dead_code)]
 enum SpannedChaseResult<'syn, 'lex> {
     SpannedCaught(&'syn Token<'lex>, Span),
-    SpannedMissing(Option<&'syn Spanned<Token<'lex>>>),
+    SpannedMissing(&'syn Spanned<Token<'lex>>),
 }
 use SpannedChaseResult::*;
