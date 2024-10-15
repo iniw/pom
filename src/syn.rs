@@ -86,7 +86,6 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>>> Parser<I> {
             SpannedCaught(Token::Number(number), span) => {
                 let number = number.parse().map_err(|_| Error {
                     kind: ErrorKind::InvalidNumericLiteral,
-                    origin: ErrorOrigin::Expr(self.exprs.next_handle()),
                     span,
                 })?;
                 Ok(self.exprs.add(Expr::Literal(Literal::Number(number))))
@@ -122,16 +121,9 @@ pub enum BinaryOp {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum ErrorOrigin {
-    Stmt(Handle<Stmt>),
-    Expr(Handle<Expr>),
-}
-
-#[derive(Debug, Copy, Clone)]
 #[expect(dead_code)]
 pub struct Error {
     kind: ErrorKind,
-    origin: ErrorOrigin,
     span: Span,
 }
 
