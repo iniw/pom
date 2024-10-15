@@ -57,12 +57,21 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>>> Parser<I> {
         while let Missing(_) = chase!(self.tokens, Token::EndOfFile) {
             if let Err(error) = self.parse_statement() {
                 self.errors.push(error);
+                self.synchronize();
             }
         }
     }
 
     fn parse_statement(&mut self) -> Result<Handle<Stmt>, Error> {
         let expr = self.parse_expression()?;
+
+        if let Missing(token) = chase!(self.tokens, Token::Semicolon) {
+            return Err(Error {
+                kind: ErrorKind::MissingSemicolon,
+                span: token.span,
+            });
+        }
+
         Ok(self.stmts.add(Stmt::Expr(expr)))
     }
 
@@ -90,8 +99,28 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>>> Parser<I> {
                 })?;
                 Ok(self.exprs.add(Expr::Literal(Literal::Number(number))))
             }
-            _ => unreachable!(),
+            SpannedMissing(token) => Err(Error {
+                kind: ErrorKind::UnexpectedToken,
+                span: token.span,
+            }),
+
+            // This is just here to make the compiler shut up about missing match arms.
+            SpannedCaught(..) => unreachable!(),
         }
+    }
+
+    fn synchronize(&mut self) {
+        // Consume tokens until we hit the beginning of a statement (or EOF)
+        while self
+            .tokens
+            .next_if(|token| {
+                !matches!(
+                    token.data,
+                    Token::Return | Token::LeftBrace | Token::EndOfFile
+                )
+            })
+            .is_some()
+        {}
     }
 }
 
@@ -121,15 +150,35 @@ pub enum BinaryOp {
 }
 
 #[derive(Debug, Copy, Clone)]
-#[expect(dead_code)]
 pub struct Error {
     kind: ErrorKind,
     span: Span,
 }
 
+impl Error {
+    pub fn render(&self, source_code: &str) -> String {
+        match self.kind {
+            ErrorKind::InvalidNumericLiteral => {
+                format!("Invalid numeric literal {}", self.span.render(source_code))
+            }
+            ErrorKind::MissingSemicolon => {
+                format!(
+                    "Expected semicolon at the end of a statement, got {}",
+                    self.span.render(source_code)
+                )
+            }
+            ErrorKind::UnexpectedToken => {
+                format!("Unexpected token {}", self.span.render(source_code))
+            }
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone)]
 pub enum ErrorKind {
     InvalidNumericLiteral,
+    MissingSemicolon,
+    UnexpectedToken,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -141,7 +190,6 @@ enum ChaseResult<'syn, 'lex> {
 use ChaseResult::*;
 
 #[derive(Debug, Copy, Clone)]
-#[expect(dead_code)]
 enum SpannedChaseResult<'syn, 'lex> {
     SpannedCaught(&'syn Token<'lex>, Span),
     SpannedMissing(&'syn Spanned<Token<'lex>>),

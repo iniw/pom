@@ -56,7 +56,7 @@ fn main() {
         if !errors.is_empty() {
             eprintln!("Syntax errors:");
             for e in &errors {
-                eprintln!("  - {:?}", e)
+                eprintln!("  - {}", e.render(&src))
             }
             eprintln!();
 
