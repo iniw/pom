@@ -15,6 +15,10 @@ impl<T> Pool<T> {
     pub fn get(&self, handle: Handle<T>) -> &T {
         &self.0[handle.idx as usize]
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl<'a, T> IntoIterator for &'a Pool<T> {
@@ -54,7 +58,7 @@ impl<T> Default for Pool<T> {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Handle<T> {
     idx: u32,
     _phantom: std::marker::PhantomData<T>,
@@ -66,5 +70,11 @@ impl<T> Handle<T> {
             idx,
             _phantom: std::marker::PhantomData {},
         }
+    }
+}
+
+impl<T> std::fmt::Debug for Handle<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Handle({})", self.idx)
     }
 }
