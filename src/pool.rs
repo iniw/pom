@@ -7,15 +7,18 @@ impl<T> Pool<T> {
         Self(Vec::with_capacity(1000))
     }
 
+    #[inline]
     pub fn add(&mut self, entry: T) -> Handle<T> {
         self.0.push(entry);
         Handle::new((self.0.len() - 1) as u32)
     }
 
+    #[inline]
     pub fn get(&self, handle: Handle<T>) -> &T {
-        &self.0[handle.idx as usize]
+        unsafe { self.0.get_unchecked(handle.idx as usize) }
     }
 
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -65,6 +68,7 @@ pub struct Handle<T> {
 }
 
 impl<T> Handle<T> {
+    #[inline]
     fn new(idx: u32) -> Self {
         Self {
             idx,
