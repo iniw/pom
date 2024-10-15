@@ -25,7 +25,10 @@ impl Interpreter {
         stmt: Handle<Stmt>,
     ) -> Result<(), RuntimeError> {
         match stmts.get(stmt) {
-            Stmt::Expr(expr) => dbg!(self.evaluate_expression(stmts, exprs, *expr)?),
+            Stmt::Expr(expr) => {
+                dbg!(self.evaluate_expression(stmts, exprs, *expr)?);
+            }
+            Stmt::Empty => (),
         };
         Ok(())
     }
@@ -42,6 +45,9 @@ impl Interpreter {
                 let right = self.evaluate_expression(stmts, exprs, *right)?;
                 match op {
                     BinaryOp::Add => left.add(right),
+                    BinaryOp::Sub => left.sub(right),
+                    BinaryOp::Div => left.div(right),
+                    BinaryOp::Mul => left.mul(right),
                 }
             }
             Expr::Literal(literal) => match literal {
@@ -72,6 +78,45 @@ impl Value {
         use Value::*;
         match (&mut *self, right) {
             (Number(a), Number(b)) => *a += b,
+        };
+        Ok(())
+    }
+
+    fn sub(mut self, right: Value) -> Result<Value, RuntimeError> {
+        self.sub_assign(right)?;
+        Ok(self)
+    }
+
+    fn sub_assign(&mut self, right: Value) -> Result<(), RuntimeError> {
+        use Value::*;
+        match (&mut *self, right) {
+            (Number(a), Number(b)) => *a -= b,
+        };
+        Ok(())
+    }
+
+    fn div(mut self, right: Value) -> Result<Value, RuntimeError> {
+        self.div_assign(right)?;
+        Ok(self)
+    }
+
+    fn div_assign(&mut self, right: Value) -> Result<(), RuntimeError> {
+        use Value::*;
+        match (&mut *self, right) {
+            (Number(a), Number(b)) => *a /= b,
+        };
+        Ok(())
+    }
+
+    fn mul(mut self, right: Value) -> Result<Value, RuntimeError> {
+        self.mul_assign(right)?;
+        Ok(self)
+    }
+
+    fn mul_assign(&mut self, right: Value) -> Result<(), RuntimeError> {
+        use Value::*;
+        match (&mut *self, right) {
+            (Number(a), Number(b)) => *a *= b,
         };
         Ok(())
     }
