@@ -1,68 +1,75 @@
 use std::iter::Peekable;
 
-use crate::lex::{Spanned, Token};
+use crate::{
+    lex::{Span, Spanned, Token},
+    pool::{Handle, Pool},
+};
 
-macro_rules! eat {
+macro_rules! chase {
     ($tokens:expr, $pattern:pat $(if $guard:expr)? $(,)?) => {{
-        if let Some(ctx) = $tokens.next_if(|next| match next.data {
+        if let Some(ref ctx) = $tokens.next_if(|next| match next.data {
                 $pattern $(if $guard)? => true,
                 _ => false,
             }) {
-            Found(ctx.data)
+            ChaseResult::Caught(&ctx.data)
         } else {
-            NotFound($tokens.peek().copied())
+            ChaseResult::Missing($tokens.peek())
         }
     }};
 }
 
-#[derive(Debug, Copy, Clone)]
-enum EatResult<'lex> {
-    Found(Token<'lex>),
-    NotFound(Option<Spanned<Token<'lex>>>),
+macro_rules! spanned_chase {
+    ($tokens:expr, $pattern:pat $(if $guard:expr)? $(,)?) => {{
+        if let Some(ref ctx) = $tokens.next_if(|next| match next.data {
+                $pattern $(if $guard)? => true,
+                _ => false,
+            }) {
+            SpannedChaseResult::SpannedCaught(&ctx.data, ctx.span)
+        } else {
+            SpannedChaseResult::SpannedMissing($tokens.peek())
+        }
+    }};
 }
-use EatResult::*;
 
-#[derive(Debug)]
-pub struct Parser<'lex, I: Iterator<Item = Spanned<Token<'lex>>>> {
+pub struct Parser<I: Iterator> {
     tokens: Peekable<I>,
     exprs: Pool<Expr>,
     stmts: Pool<Stmt>,
+    errors: Vec<Error>,
 }
 
-impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>>> Parser<'lex, I> {
+impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>>> Parser<I> {
     pub fn new(tokens: impl IntoIterator<IntoIter = I>) -> Self {
         Self {
             tokens: tokens.into_iter().peekable(),
             exprs: Pool::new(),
             stmts: Pool::new(),
+            errors: Vec::new(),
         }
     }
 
-    pub fn parse(mut self) -> (Vec<Stmt>, Vec<SyntaxError>) {
-        self.parse_program()
+    pub fn parse(mut self) -> (Pool<Stmt>, Pool<Expr>, Vec<Error>) {
+        self.parse_program();
+        (self.stmts, self.exprs, self.errors)
     }
 
-    fn parse_program(&mut self) -> (Vec<Stmt>, Vec<SyntaxError>) {
-        let mut statements = Vec::new();
-        let mut errors = Vec::new();
-
+    fn parse_program(&mut self) {
         while self.tokens.peek().is_some() {
-            match self.parse_statement() {
-                Ok(statement) => statements.push(statement),
-                Err(error) => errors.push(error),
+            if let Err(error) = self.parse_statement() {
+                self.errors.push(error);
             }
         }
-
-        (statements, errors)
     }
 
-    fn parse_statement(&mut self) -> Result<Stmt, SyntaxError> {
-        Ok(Stmt::Expr(self.parse_expression()?))
+    fn parse_statement(&mut self) -> Result<Handle<Stmt>, Error> {
+        let expr = self.parse_expression()?;
+        Ok(self.stmts.add(Stmt::Expr(expr)))
     }
 
-    fn parse_expression(&mut self) -> Result<Handle, SyntaxError> {
+    fn parse_expression(&mut self) -> Result<Handle<Expr>, Error> {
         let mut expr = self.parse_precedence1()?;
-        while let Found(_) = eat!(self.tokens, Token::Add) {
+
+        while let Caught(_) = chase!(self.tokens, Token::Add) {
             let right = self.parse_precedence1()?;
             expr = self.exprs.add(Expr::Binary {
                 left: expr,
@@ -74,11 +81,16 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>>> Parser<'lex, I> {
         Ok(expr)
     }
 
-    fn parse_precedence1(&mut self) -> Result<Handle, SyntaxError> {
-        match dbg!(eat!(self.tokens, Token::Number(_))) {
-            Found(Token::Number(num)) => Ok(self.exprs.add(Expr::Literal(Literal::Number(
-                num.parse().expect("Failed to parse numeric literal"),
-            )))),
+    fn parse_precedence1(&mut self) -> Result<Handle<Expr>, Error> {
+        match spanned_chase!(self.tokens, Token::Number(_)) {
+            SpannedCaught(Token::Number(number), span) => {
+                let number = number.parse().map_err(|_| Error {
+                    kind: ErrorKind::InvalidNumericLiteral,
+                    origin: ErrorOrigin::Expr(self.exprs.next_handle()),
+                    span,
+                })?;
+                Ok(self.exprs.add(Expr::Literal(Literal::Number(number))))
+            }
             _ => unreachable!(),
         }
     }
@@ -86,15 +98,15 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>>> Parser<'lex, I> {
 
 #[derive(Debug, Copy, Clone)]
 pub enum Stmt {
-    Expr(Handle),
+    Expr(Handle<Expr>),
 }
 
 #[derive(Debug, Copy, Clone)]
 pub enum Expr {
     Binary {
-        left: Handle,
+        left: Handle<Expr>,
         op: BinaryOp,
-        right: Handle,
+        right: Handle<Expr>,
     },
     Literal(Literal),
 }
@@ -104,34 +116,42 @@ pub enum Literal {
     Number(f64),
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct Handle(u32);
-
-#[derive(Debug, Clone)]
-pub struct Pool<T> {
-    pool: Vec<T>,
-}
-
-impl<T> Pool<T> {
-    fn new() -> Self {
-        Self {
-            pool: Vec::with_capacity(1000),
-        }
-    }
-    fn add(&mut self, data: T) -> Handle {
-        self.pool.push(data);
-        Handle((self.pool.len() - 1) as u32)
-    }
-
-    fn get(&self, handle: Handle) -> &T {
-        &self.pool[handle.0 as usize]
-    }
-}
-
 #[derive(Debug, Copy, Clone)]
 pub enum BinaryOp {
     Add,
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum SyntaxError {}
+pub enum ErrorOrigin {
+    Stmt(Handle<Stmt>),
+    Expr(Handle<Expr>),
+}
+
+#[derive(Debug, Copy, Clone)]
+#[expect(dead_code)]
+pub struct Error {
+    kind: ErrorKind,
+    origin: ErrorOrigin,
+    span: Span,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum ErrorKind {
+    InvalidNumericLiteral,
+}
+
+#[derive(Debug, Copy, Clone)]
+#[expect(dead_code)]
+enum ChaseResult<'syn, 'lex> {
+    Caught(&'syn Token<'lex>),
+    Missing(Option<&'syn Spanned<Token<'lex>>>),
+}
+use ChaseResult::*;
+
+#[derive(Debug, Copy, Clone)]
+#[expect(dead_code)]
+enum SpannedChaseResult<'syn, 'lex> {
+    SpannedCaught(&'syn Token<'lex>, Span),
+    SpannedMissing(Option<&'syn Spanned<Token<'lex>>>),
+}
+use SpannedChaseResult::*;
