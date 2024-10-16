@@ -1,14 +1,14 @@
 use std::mem;
 
 pub struct Processor<'gen> {
-    program: &'gen [u8],
+    program: &'gen [Op],
     pc: Word,
     bp: Word,
     regs: Vec<Reg>,
 }
 
 impl<'gen> Processor<'gen> {
-    pub fn new(program: &'gen [u8]) -> Self {
+    pub fn new(program: &'gen [Op]) -> Self {
         Self {
             regs: Vec::new(),
             pc: 0,
@@ -24,59 +24,39 @@ impl<'gen> Processor<'gen> {
                 break;
             }
 
-            match dbg!(self.fetch::<OpCode>()) {
-                OpCode::Call => {
-                    let addr = self.fetch::<Word>();
-
-                    self.regs.push(Reg(self.pc));
-                    self.pc = addr;
+            let pc = {
+                let temp = self.pc;
+                mem::replace(&mut self.pc, temp + 1)
+            };
+            match self.program[pc as usize] {
+                Op::Call { addr } => {
+                    let ret_addr = mem::replace(&mut self.pc, addr);
+                    self.regs.push(Reg(ret_addr));
                 }
-                OpCode::Setup => {
+                Op::Reserve { regs } => {
                     self.regs.push(Reg(self.bp));
                     self.bp = self.regs.len() as Word;
 
-                    let regs = self.fetch::<Reg>();
-                    for _ in 0..regs {
-                        self.regs.push(Reg(0));
-                    }
+                    self.regs
+                        .resize_with(self.regs.len() + regs as usize, Default::default);
                 }
-                OpCode::Ret => {
-                    let regs = self.regs.len() - self.bp as usize;
-                    for _ in 0..regs {
-                        self.regs.pop();
-                    }
+                Op::Ret => {
+                    self.regs.truncate(self.bp as usize);
 
                     self.bp = self.regs.pop().expect("Calling convention violated!").0;
                     self.pc = self.regs.pop().expect("Calling convention violated!").0;
                 }
-                OpCode::Load => {
-                    let reg1 = self.fetch::<Reg>();
-                    let reg2 = self.fetch::<Reg>();
-                    *self.reg(reg1) = *self.reg(reg2);
+                Op::Load { dst, src } => {
+                    *self.reg(dst) = *self.reg(src);
                 }
-                OpCode::LoadImm => {
-                    let reg = self.fetch::<Reg>();
-                    let imm = self.fetch::<Word>();
-                    *self.reg(reg) = Reg(imm);
+                Op::LoadImm { dst, imm } => {
+                    *self.reg(dst) = Reg(imm);
                 }
-                OpCode::Add => {
-                    let reg1 = self.fetch::<Reg>();
-                    let reg2 = self.fetch::<Reg>();
-                    let reg3 = self.fetch::<Reg>();
-                    *self.reg(reg1) = *self.reg(reg2) + *self.reg(reg3);
+                Op::Add { dst, left, right } => {
+                    *self.reg(dst) = *self.reg(left) + *self.reg(right);
                 }
-                OpCode::AddImm => {
-                    let reg1 = self.fetch::<Reg>();
-                    let reg2 = self.fetch::<Reg>();
-                    let imm = self.fetch::<Word>();
-                    *self.reg(reg1) = *self.reg(reg2) + imm;
-                }
-                OpCode::Halt => {
+                Op::Halt => {
                     println!("Halting, bye!");
-                    break;
-                }
-                OpCode::Illegal => {
-                    eprintln!("Illegal instruction, something went wrong.");
                     break;
                 }
             }
@@ -85,22 +65,14 @@ impl<'gen> Processor<'gen> {
     }
 
     #[inline(always)]
-    fn reg(&mut self, idx: <Reg as Fetchable>::Output) -> &mut Reg {
+    fn reg(&mut self, idx: u8) -> &mut Reg {
         &mut self.regs[self.bp as usize + idx as usize]
-    }
-
-    #[inline(always)]
-    fn fetch<T: Fetchable>(&mut self) -> T::Output {
-        let size = mem::size_of::<T::Output>() as Word;
-        let data = T::from_bytes(&self.program[self.pc as usize..(self.pc + size) as usize]);
-        self.pc += size;
-        data
     }
 }
 
 type Word = u32;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 #[repr(transparent)]
 pub struct Reg(Word);
 
@@ -123,105 +95,17 @@ impl std::ops::Add<Word> for Reg {
 }
 
 #[derive(Debug, Copy, Clone)]
-enum OpCode {
-    Call,
-    Setup,
+pub enum Op {
+    Call { addr: Word },
+    Reserve { regs: u8 },
     Ret,
 
-    Load,
-    LoadImm,
+    Load { dst: u8, src: u8 },
+    LoadImm { dst: u8, imm: Word },
 
-    Add,
-    AddImm,
+    Add { dst: u8, left: u8, right: u8 },
 
     Halt,
-    Illegal,
-}
-
-impl From<u8> for OpCode {
-    fn from(byte: u8) -> Self {
-        match byte {
-            0 => OpCode::Call,
-            1 => OpCode::Setup,
-            2 => OpCode::Ret,
-            3 => OpCode::Load,
-            4 => OpCode::LoadImm,
-            5 => OpCode::Add,
-            6 => OpCode::AddImm,
-            7 => OpCode::Halt,
-            _ => OpCode::Illegal,
-        }
-    }
-}
-
-trait Fetchable: Sized {
-    type Output;
-
-    fn from_bytes(bytes: &[u8]) -> Self::Output;
-}
-
-impl Fetchable for u8 {
-    type Output = u8;
-
-    #[inline(always)]
-    fn from_bytes(bytes: &[u8]) -> Self::Output {
-        bytes[0]
-    }
-}
-
-impl Fetchable for u16 {
-    type Output = u16;
-
-    #[inline(always)]
-    fn from_bytes(bytes: &[u8]) -> Self::Output {
-        (bytes[0] as u16) | (bytes[1] as u16) << 8
-    }
-}
-
-impl Fetchable for u32 {
-    type Output = u32;
-
-    #[inline(always)]
-    fn from_bytes(bytes: &[u8]) -> Self::Output {
-        (bytes[0] as u32)
-            | (bytes[1] as u32) << 8
-            | (bytes[2] as u32) << 16
-            | (bytes[3] as u32) << 24
-    }
-}
-
-impl Fetchable for u64 {
-    type Output = u64;
-
-    #[inline(always)]
-    fn from_bytes(bytes: &[u8]) -> Self::Output {
-        (bytes[0] as u64)
-            | (bytes[1] as u64) << 8
-            | (bytes[2] as u64) << 16
-            | (bytes[3] as u64) << 24
-            | (bytes[4] as u64) << 32
-            | (bytes[5] as u64) << 40
-            | (bytes[6] as u64) << 48
-            | (bytes[7] as u64) << 56
-    }
-}
-
-impl Fetchable for Reg {
-    type Output = u8;
-
-    #[inline(always)]
-    fn from_bytes(bytes: &[u8]) -> Self::Output {
-        <u8 as Fetchable>::from_bytes(bytes)
-    }
-}
-
-impl Fetchable for OpCode {
-    type Output = OpCode;
-
-    #[inline(always)]
-    fn from_bytes(bytes: &[u8]) -> Self::Output {
-        OpCode::from(<u8 as Fetchable>::from_bytes(bytes))
-    }
 }
 
 #[expect(dead_code)]
