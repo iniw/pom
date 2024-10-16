@@ -1,6 +1,6 @@
 use std::{env, fs, path::PathBuf};
 
-use pom::{eval, lex, syn};
+use pom::{lex, syn, vm};
 
 fn main() {
     // Skip the filepath
@@ -59,13 +59,27 @@ fn main() {
                 eprintln!("  - {}", e.render(&src))
             }
             eprintln!();
-
-            // Don't evaluate when there are syntax errors
-            return;
         }
 
-        let mut interpreter = eval::Interpreter::new();
-        let result = interpreter.evaluate(stmts, exprs);
-        dbg!(&result);
+        #[rustfmt::skip]
+        let program = [
+            // 0x0: Call - stores pc and jumps to address 0x6
+            0x0, 0x6, 0x0, 0x0, 0x0,
+            // 0x7: Halt - will be executed after the function returns
+            0x7,
+
+            // "Function" - call target
+
+            // 0x1: Reserve - function prelude, reserves 5 registers
+            0x1, 0x5,
+            // 0x4: LoadImm - loads 6 into register 0
+            0x4, 0x0, 0x6, 0x0, 0x0, 0x0,
+            // 0x6: Add - adds register 0 to register 0 and store in register 1
+            0x5, 0x1, 0x0, 0x0,
+            // 0x2: Ret - cleans up the reserved register and restores pc
+            0x2,
+        ];
+        let cpu = vm::Processor::new(&program);
+        cpu.run();
     }
 }
