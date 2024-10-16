@@ -61,23 +61,19 @@ fn main() {
             eprintln!();
         }
 
-        #[rustfmt::skip]
+        use vm::Op::*;
         let program = [
-            // 0x0: Call - stores pc and jumps to address 0x6
-            0x0, 0x6, 0x0, 0x0, 0x0,
-            // 0x7: Halt - will be executed after the function returns
-            0x7,
-
-            // "Function" - call target
-
-            // 0x1: Reserve - function prelude, reserves 5 registers
-            0x1, 0x5,
-            // 0x4: LoadImm - loads 6 into register 0
-            0x4, 0x0, 0x6, 0x0, 0x0, 0x0,
-            // 0x6: Add - adds register 0 to register 0 and store in register 1
-            0x5, 0x1, 0x0, 0x0,
-            // 0x2: Ret - cleans up the reserved register and restores pc
-            0x2,
+            Call { addr: 2 },
+            Halt,
+            // "Function"
+            Reserve { regs: 5 },
+            LoadImm { dst: 0, imm: 6 },
+            Add {
+                dst: 1,
+                left: 0,
+                right: 0,
+            },
+            Ret,
         ];
         let cpu = vm::Processor::new(&program);
         cpu.run();
