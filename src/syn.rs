@@ -184,15 +184,15 @@ pub enum Expr {
 
 #[derive(Debug, Copy, Clone)]
 pub enum Literal {
-    Number(f64),
+    Number(u32),
 }
 
 #[derive(Debug, Copy, Clone)]
 pub enum BinaryOp {
-    Add,
-    Sub,
     Div,
     Mul,
+    Add,
+    Sub,
 }
 
 #[derive(Debug, Copy, Clone)]

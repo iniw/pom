@@ -4,7 +4,7 @@ pub struct Pool<T>(Vec<T>);
 impl<T> Pool<T> {
     pub fn new() -> Self {
         // FIXME: Use a hint from the source code somehow?
-        Self(Vec::with_capacity(1000))
+        Self(Vec::new())
     }
 
     #[inline]
