@@ -1,4 +1,4 @@
-use std::{env, fs, path::PathBuf};
+use std::{env, fs, path::PathBuf, time};
 
 use pom::{lex, syn, vm};
 
@@ -14,6 +14,8 @@ fn main() {
             eprintln!("Failed to read file \"{}\".", filename.to_string_lossy());
             continue;
         };
+
+        let start = time::Instant::now();
 
         let lexer = lex::Lexer::new(&src);
         let (tokens, errors) = lexer.lex();
@@ -61,21 +63,14 @@ fn main() {
             eprintln!();
         }
 
-        use vm::Op::*;
-        let program = [
-            Call { addr: 2 },
-            Halt,
-            // "Function"
-            Reserve { regs: 5 },
-            LoadImm { dst: 0, imm: 6 },
-            Add {
-                dst: 1,
-                left: 0,
-                right: 0,
-            },
-            Ret,
-        ];
+        let gen = vm::Generator::new();
+        let program = gen.generate(stmts, exprs);
+
         let cpu = vm::Processor::new(&program);
         cpu.run();
+
+        println!("Total execution took: {:?}", start.elapsed());
+
+        dbg!(&program);
     }
 }
