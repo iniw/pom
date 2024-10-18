@@ -7,13 +7,13 @@ use crate::{
 
 macro_rules! spanned_chase {
     ($tokens:expr, $pattern:pat $(if $guard:expr)? $(,)?) => {{
-        if let Some(ref ctx) = $tokens.next_if(|next| match next.data {
+        if let Some(ctx) = $tokens.next_if(|next| match next.data {
                 $pattern $(if $guard)? => true,
                 _ => false,
             }) {
-            SpannedChaseResult::SpannedCaught(&ctx.data, ctx.span)
+            SpannedChaseResult::SpannedCaught(ctx.data, ctx.span)
         } else {
-            SpannedChaseResult::SpannedMissing($tokens.peek().expect("ICE: Shouldn't reach end of token stream when chasing."))
+            SpannedChaseResult::SpannedMissing(*$tokens.peek().expect("ICE: Shouldn't reach end of token stream when chasing."))
         }
     }};
 }
@@ -27,24 +27,26 @@ macro_rules! chase {
     }};
 }
 
-pub struct Parser<I: Iterator + std::fmt::Debug> {
+pub struct Parser<'lex, I: Iterator + std::fmt::Debug> {
     tokens: Peekable<I>,
-    exprs: Pool<Expr>,
-    stmts: Pool<Stmt>,
+    exprs: Pool<Expr<'lex>>,
+    stmts: Pool<Stmt<'lex>>,
     errors: Vec<Error>,
+    override_expr: Option<Handle<Expr<'lex>>>,
 }
 
-impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<I> {
+impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'lex, I> {
     pub fn new(tokens: impl IntoIterator<IntoIter = I>) -> Self {
         Self {
             tokens: tokens.into_iter().peekable(),
             exprs: Pool::new(),
             stmts: Pool::new(),
             errors: Vec::new(),
+            override_expr: None,
         }
     }
 
-    pub fn parse(mut self) -> (Pool<Stmt>, Pool<Expr>, Vec<Error>) {
+    pub fn parse(mut self) -> (Pool<Stmt<'lex>>, Pool<Expr<'lex>>, Vec<Error>) {
         self.parse_program();
         (self.stmts, self.exprs, self.errors)
     }
@@ -58,32 +60,60 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<I>
         }
     }
 
-    fn parse_statement(&mut self) -> Result<Handle<Stmt>, Error> {
-        match chase!(self.tokens, Token::Semicolon) {
-            Caught(Token::Semicolon) => Ok(self.stmts.add(Stmt::Empty)),
-            Missing(_) => {
-                let expr = self.parse_expression()?;
+    fn parse_statement(&mut self) -> Result<Handle<Stmt<'lex>>, Error> {
+        match chase!(self.tokens, Token::Symbol(_)) {
+            Caught(Token::Symbol(name)) => match chase!(self.tokens, Token::Colon) {
+                Caught(_) => match chase!(self.tokens, Token::Equal) {
+                    Caught(_) => {
+                        let expr = self.parse_expression()?;
 
-                if let Missing(token) = chase!(self.tokens, Token::Semicolon) {
-                    return Err(Error {
-                        kind: ErrorKind::MissingSemicolon,
-                        span: token.span,
-                    });
+                        if let Missing(token) = chase!(self.tokens, Token::Semicolon) {
+                            return Err(Error {
+                                kind: ErrorKind::MissingSemicolon,
+                                span: token.span,
+                            });
+                        }
+
+                        Ok(self.stmts.add(Stmt::SymbolDecl {
+                            name,
+                            kind: None,
+                            expr: Some(expr),
+                        }))
+                    }
+                    Missing(_) => {
+                        todo!("Implement symbol kinds");
+                    }
+                },
+                Missing(_) => {
+                    self.override_expr = Some(self.exprs.add(Expr::Symbol(name)));
+                    self.parse_statement_expression()
                 }
-
-                Ok(self.stmts.add(Stmt::Expr(expr)))
-            }
+            },
+            Missing(_) => self.parse_statement_expression(),
 
             // This is just here to make the compiler shut up about missing match arms.
-            Caught(_) => unreachable!(),
+            _ => unreachable!(),
         }
     }
 
-    fn parse_expression(&mut self) -> Result<Handle<Expr>, Error> {
+    fn parse_statement_expression(&mut self) -> Result<Handle<Stmt<'lex>>, Error> {
+        let expr = self.parse_expression()?;
+
+        if let Missing(token) = chase!(self.tokens, Token::Semicolon) {
+            return Err(Error {
+                kind: ErrorKind::MissingSemicolon,
+                span: token.span,
+            });
+        }
+
+        Ok(self.stmts.add(Stmt::Expr(expr)))
+    }
+
+    fn parse_expression(&mut self) -> Result<Handle<Expr<'lex>>, Error> {
         self.parse_precedence0()
     }
 
-    fn parse_precedence0(&mut self) -> Result<Handle<Expr>, Error> {
+    fn parse_precedence0(&mut self) -> Result<Handle<Expr<'lex>>, Error> {
         let mut expr = self.parse_precedence1()?;
 
         while let Caught(token) = chase!(self.tokens, Token::Plus | Token::Minus) {
@@ -104,7 +134,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<I>
         Ok(expr)
     }
 
-    fn parse_precedence1(&mut self) -> Result<Handle<Expr>, Error> {
+    fn parse_precedence1(&mut self) -> Result<Handle<Expr<'lex>>, Error> {
         let mut expr = self.parse_precedence2()?;
 
         while let Caught(token) = chase!(self.tokens, Token::Slash | Token::Star) {
@@ -125,7 +155,11 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<I>
         Ok(expr)
     }
 
-    fn parse_precedence2(&mut self) -> Result<Handle<Expr>, Error> {
+    fn parse_precedence2(&mut self) -> Result<Handle<Expr<'lex>>, Error> {
+        if let Some(override_expr) = self.override_expr.take() {
+            return Ok(override_expr);
+        }
+
         match spanned_chase!(self.tokens, Token::Number(_) | Token::LeftParenthesis) {
             SpannedCaught(Token::Number(number), span) => {
                 let number = number.parse().map_err(|_| Error {
@@ -152,7 +186,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<I>
             }),
 
             // This is just here to make the compiler shut up about missing match arms.
-            SpannedCaught(..) => unreachable!(),
+            _ => unreachable!(),
         }
     }
 
@@ -167,19 +201,24 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<I>
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum Stmt {
-    Expr(Handle<Expr>),
-    Empty,
+pub enum Stmt<'lex> {
+    Expr(Handle<Expr<'lex>>),
+    SymbolDecl {
+        name: &'lex str,
+        kind: Option<&'lex str>,
+        expr: Option<Handle<Expr<'lex>>>,
+    },
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum Expr {
+pub enum Expr<'lex> {
     Binary {
-        left: Handle<Expr>,
+        left: Handle<Expr<'lex>>,
         op: BinaryOp,
-        right: Handle<Expr>,
+        right: Handle<Expr<'lex>>,
     },
     Literal(Literal),
+    Symbol(&'lex str),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -235,15 +274,15 @@ pub enum ErrorKind {
 }
 
 #[derive(Debug, Copy, Clone)]
-enum ChaseResult<'syn, 'lex> {
-    Caught(&'syn Token<'lex>),
-    Missing(&'syn Spanned<Token<'lex>>),
+enum ChaseResult<'lex> {
+    Caught(Token<'lex>),
+    Missing(Spanned<Token<'lex>>),
 }
 use ChaseResult::*;
 
 #[derive(Debug, Copy, Clone)]
-enum SpannedChaseResult<'syn, 'lex> {
-    SpannedCaught(&'syn Token<'lex>, Span),
-    SpannedMissing(&'syn Spanned<Token<'lex>>),
+enum SpannedChaseResult<'lex> {
+    SpannedCaught(Token<'lex>, Span),
+    SpannedMissing(Spanned<Token<'lex>>),
 }
 use SpannedChaseResult::*;
