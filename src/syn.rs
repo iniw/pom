@@ -225,12 +225,20 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
     }
 
     fn synchronize(&mut self) {
-        // Consume tokens until we hit the beginning of a statement (or EOF)
-        while self
-            .tokens
-            .next_if(|token| !matches!(token.data, Token::Semicolon | Token::EndOfFile))
-            .is_some()
-        {}
+        // Consume tokens until we hit a semicolon, indicating the end of a statement. (or EOF).
+        while let Some(token) = self.tokens.peek() {
+            match token.data {
+                Token::Semicolon => {
+                    self.tokens.next();
+                    return;
+                }
+                Token::EndOfFile => return,
+                _ => {
+                    // Consume
+                    self.tokens.next();
+                }
+            }
+        }
     }
 }
 
