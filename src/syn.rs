@@ -61,34 +61,49 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
     }
 
     fn parse_statement(&mut self) -> Result<Handle<Stmt<'lex>>, Error> {
-        match chase!(self.tokens, Token::Symbol(_)) {
+        match chase!(self.tokens, Token::Print | Token::Symbol(_)) {
             Caught(Token::Symbol(name)) => match chase!(self.tokens, Token::Colon) {
-                Caught(_) => match chase!(self.tokens, Token::Equal) {
-                    Caught(_) => {
-                        let expr = self.parse_expression()?;
-
-                        if let Missing(token) = chase!(self.tokens, Token::Semicolon) {
-                            return Err(Error {
-                                kind: ErrorKind::MissingSemicolon,
-                                span: token.span,
-                            });
-                        }
-
+                Caught(_) => match chase!(self.tokens, Token::Equal | Token::Fn) {
+                    Caught(Token::Equal) => {
+                        let expr = self.parse_expression_and_semicolon()?;
                         Ok(self.stmts.add(Stmt::SymbolDecl {
                             name,
                             kind: None,
                             expr: Some(expr),
                         }))
                     }
-                    Missing(_) => {
-                        todo!("Implement symbol kinds");
+                    Caught(Token::Fn) => {
+                        if let Missing(token) = chase!(self.tokens, Token::Equal) {
+                            return Err(Error {
+                                kind: ErrorKind::UnexpectedToken,
+                                span: token.span,
+                            });
+                        }
+
+                        let expr = self.parse_expression_and_semicolon()?;
+                        Ok(self.stmts.add(Stmt::SymbolDecl {
+                            name,
+                            kind: Some(SymbolKind::Fn),
+                            expr: Some(expr),
+                        }))
                     }
+                    Missing(token) => Err(Error {
+                        kind: ErrorKind::UnknownKind,
+                        span: token.span,
+                    }),
+
+                    // This is just here to make the compiler shut up about missing match arms.
+                    _ => unreachable!(),
                 },
                 Missing(_) => {
                     self.override_expr = Some(self.exprs.add(Expr::Symbol(name)));
                     self.parse_statement_expression()
                 }
             },
+            Caught(Token::Print) => {
+                let expr = self.parse_expression_and_semicolon()?;
+                Ok(self.stmts.add(Stmt::Print(expr)))
+            }
             Missing(_) => self.parse_statement_expression(),
 
             // This is just here to make the compiler shut up about missing match arms.
@@ -97,6 +112,15 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
     }
 
     fn parse_statement_expression(&mut self) -> Result<Handle<Stmt<'lex>>, Error> {
+        let expr = self.parse_expression_and_semicolon()?;
+        Ok(self.stmts.add(Stmt::Expr(expr)))
+    }
+
+    fn parse_expression(&mut self) -> Result<Handle<Expr<'lex>>, Error> {
+        self.parse_precedence0()
+    }
+
+    fn parse_expression_and_semicolon(&mut self) -> Result<Handle<Expr<'lex>>, Error> {
         let expr = self.parse_expression()?;
 
         if let Missing(token) = chase!(self.tokens, Token::Semicolon) {
@@ -106,11 +130,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
             });
         }
 
-        Ok(self.stmts.add(Stmt::Expr(expr)))
-    }
-
-    fn parse_expression(&mut self) -> Result<Handle<Expr<'lex>>, Error> {
-        self.parse_precedence0()
+        Ok(expr)
     }
 
     fn parse_precedence0(&mut self) -> Result<Handle<Expr<'lex>>, Error> {
@@ -160,7 +180,10 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
             return Ok(override_expr);
         }
 
-        match spanned_chase!(self.tokens, Token::Number(_) | Token::LeftParenthesis) {
+        match spanned_chase!(
+            self.tokens,
+            Token::Number(_) | Token::Symbol(_) | Token::LeftBrace | Token::LeftParenthesis
+        ) {
             SpannedCaught(Token::Number(number), span) => {
                 let number = number.parse().map_err(|_| Error {
                     kind: ErrorKind::InvalidNumericLiteral,
@@ -168,6 +191,17 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
                 })?;
                 Ok(self.exprs.add(Expr::Literal(Literal::Number(number))))
             }
+
+            SpannedCaught(Token::LeftBrace, _) => {
+                let mut exprs = Vec::new();
+                while let Missing(_) = chase!(self.tokens, Token::RightBrace) {
+                    exprs.push(self.parse_statement()?);
+                }
+                Ok(self.exprs.add(Expr::Block(exprs)))
+            }
+
+            SpannedCaught(Token::Symbol(name), _) => Ok(self.exprs.add(Expr::Symbol(name))),
+
             SpannedCaught(Token::LeftParenthesis, _) => {
                 let expr = self.parse_expression()?;
 
@@ -200,23 +234,25 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub enum Stmt<'lex> {
     Expr(Handle<Expr<'lex>>),
     SymbolDecl {
         name: &'lex str,
-        kind: Option<&'lex str>,
+        kind: Option<SymbolKind>,
         expr: Option<Handle<Expr<'lex>>>,
     },
+    Print(Handle<Expr<'lex>>),
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub enum Expr<'lex> {
     Binary {
         left: Handle<Expr<'lex>>,
         op: BinaryOp,
         right: Handle<Expr<'lex>>,
     },
+    Block(Vec<Handle<Stmt<'lex>>>),
     Literal(Literal),
     Symbol(&'lex str),
 }
@@ -232,6 +268,11 @@ pub enum BinaryOp {
     Mul,
     Add,
     Sub,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum SymbolKind {
+    Fn,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -261,6 +302,9 @@ impl Error {
             ErrorKind::UnexpectedToken => {
                 format!("Unexpected token {}", self.span.render(source_code))
             }
+            ErrorKind::UnknownKind => {
+                format!("Unexpected symbol kind {}", self.span.render(source_code))
+            }
         }
     }
 }
@@ -271,6 +315,7 @@ pub enum ErrorKind {
     MissingSemicolon,
     MissingRightParenthesis,
     UnexpectedToken,
+    UnknownKind,
 }
 
 #[derive(Debug, Copy, Clone)]
