@@ -46,32 +46,26 @@ impl<'gen> Processor<'gen> {
                     self.bp = unsafe { self.regs.pop().unwrap_unchecked().0 };
                     self.pc = unsafe { self.regs.pop().unwrap_unchecked().0 };
                 }
-                Op::Load { dst, src } => {
-                    *self.reg(dst) = *self.reg(src);
-                }
-                Op::LoadImm { dst, imm } => {
-                    *self.reg(dst) = Reg(imm);
-                }
-                Op::Add { dst, left, right } => {
-                    *self.reg(dst) = *self.reg(left) + *self.reg(right);
-                }
+
+                Op::Load { dst, src } => *self.reg(dst) = *self.reg(src),
+                Op::LoadImm { dst, imm } => *self.reg(dst) = Reg(imm),
+
+                Op::Add { dst, left, right } => *self.reg(dst) = *self.reg(left) + *self.reg(right),
                 Op::AddRegImm { dst, left, right } => *self.reg(dst) = *self.reg(left) + right,
                 Op::AddImmReg { dst, left, right } => *self.reg(dst) = left + *self.reg(right),
-                Op::Sub { dst, left, right } => {
-                    *self.reg(dst) = *self.reg(left) - *self.reg(right);
-                }
+
+                Op::Sub { dst, left, right } => *self.reg(dst) = *self.reg(left) - *self.reg(right),
                 Op::SubRegImm { dst, left, right } => *self.reg(dst) = *self.reg(left) - right,
                 Op::SubImmReg { dst, left, right } => *self.reg(dst) = left - *self.reg(right),
-                Op::Div { dst, left, right } => {
-                    *self.reg(dst) = *self.reg(left) / *self.reg(right);
-                }
+
+                Op::Div { dst, left, right } => *self.reg(dst) = *self.reg(left) / *self.reg(right),
                 Op::DivRegImm { dst, left, right } => *self.reg(dst) = *self.reg(left) / right,
                 Op::DivImmReg { dst, left, right } => *self.reg(dst) = left / *self.reg(right),
-                Op::Mul { dst, left, right } => {
-                    *self.reg(dst) = *self.reg(left) * *self.reg(right);
-                }
+
+                Op::Mul { dst, left, right } => *self.reg(dst) = *self.reg(left) * *self.reg(right),
                 Op::MulRegImm { dst, left, right } => *self.reg(dst) = *self.reg(left) * right,
                 Op::MulImmReg { dst, left, right } => *self.reg(dst) = left * *self.reg(right),
+
                 Op::Print { reg } => {
                     println!("(vm): {}", self.reg(reg).0);
                 }
@@ -386,7 +380,6 @@ impl<'syn> Generator<'syn> {
                     _ => {
                         let left = self.generate_expression(stmts, exprs, *left);
                         let right = self.generate_expression(stmts, exprs, *right);
-
                         match op {
                             BinaryOp::Add => Add { dst, left, right },
                             BinaryOp::Sub => Sub { dst, left, right },
