@@ -40,7 +40,16 @@ fn main() {
         }
 
         let parser = syn::Parser::new(tokens);
-        let (stmts, exprs, errors) = parser.parse();
+        let (outer_stmts, stmts, exprs, errors) = parser.parse();
+
+        #[cfg(debug_assertions)]
+        if !stmts.is_empty() {
+            eprintln!("Outer statements:");
+            for s in &outer_stmts {
+                eprintln!("  - {:?}", s)
+            }
+            eprintln!();
+        }
 
         #[cfg(debug_assertions)]
         if !stmts.is_empty() {
@@ -68,15 +77,17 @@ fn main() {
             eprintln!();
         } else {
             let gen = vm::Generator::new();
-            let program = gen.generate(stmts, exprs);
+            match gen.generate(outer_stmts, stmts, exprs) {
+                Ok(program) => {
+                    let cpu = vm::Processor::new(&program);
+                    cpu.run();
 
-            let cpu = vm::Processor::new(&program);
-            cpu.run();
-
-            #[cfg(debug_assertions)]
-            dbg!(&program);
+                    #[cfg(debug_assertions)]
+                    dbg!(&program);
+                }
+                Err(err) => eprintln!("Error generating code: {:?}", err),
+            }
         }
-
         println!("Total execution took: {:?}", start.elapsed());
     }
 }

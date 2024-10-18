@@ -1,8 +1,11 @@
-use std::{collections::HashMap, mem};
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    mem,
+};
 
 use crate::{
     pool::{Handle, Pool},
-    syn::{BinaryOp, Expr, Literal, Stmt, SymbolInfo, VarInfo},
+    syn::{BinaryOp, Expr, Literal, Stmt, SymbolDecl, SymbolInfo, VarInfo},
 };
 
 pub struct Processor<'gen> {
@@ -235,33 +238,61 @@ use Op::*;
 
 pub struct Generator<'syn> {
     program: Vec<Op>,
-    frames: Vec<Frame<'syn>>,
+    envs: EnvManager<'syn>,
     override_next_allocated_register: Option<u8>,
+    function_generation_queue: Vec<SymbolDecl<'syn>>,
 }
 
 impl<'syn> Generator<'syn> {
     pub fn new() -> Self {
         Self {
-            program: vec![Call { addr: 2 }, Halt],
-            frames: Vec::new(),
+            program: Vec::new(),
+            envs: EnvManager::with_global_env(),
             override_next_allocated_register: None,
+            function_generation_queue: Vec::new(),
         }
     }
 
-    // FIXME: Propagate errors here and in the generators.
-    pub fn generate(mut self, stmts: Pool<Stmt<'syn>>, exprs: Pool<Expr<'syn>>) -> Vec<Op> {
-        for stmt in stmts.handles() {
-            if let Stmt::SymbolDecl {
-                name: "main",
-                info: SymbolInfo::Fn(_),
-            } = stmts.get(stmt)
+    pub fn generate(
+        mut self,
+        outer_stmts: Pool<Stmt<'syn>>,
+        stmts: Pool<Stmt<'syn>>,
+        exprs: Pool<Expr<'syn>>,
+    ) -> Result<Vec<Op>, Error<'syn>> {
+        // The address here is the entry point, which will be patched up later when we find the
+        // `main` symbol.
+        self.program = vec![Call { addr: 0 }, Halt];
+
+        for stmt in outer_stmts.handles() {
+            match outer_stmts.get(stmt) {
+                Stmt::SymbolDecl(SymbolDecl {
+                    identifier,
+                    info: SymbolInfo::Fn(expr),
+                }) => {
+                    self.queue_function_generation(identifier, *expr)?;
+                }
+
+                Stmt::SymbolDecl(SymbolDecl {
+                    identifier: "main",
+                    info: _,
+                }) => return Err(Error::InvalidMainDeclaration),
+
+                _ => unimplemented!(),
+            }
+
+            if let Some(SymbolDecl {
+                identifier,
+                info: SymbolInfo::Fn(expr),
+            }) = self.function_generation_queue.pop()
             {
-                self.generate_statement(&stmts, &exprs, stmt);
-                return self.program;
+                let addr = self.generate_function(&stmts, &exprs, identifier, expr)?;
+                if identifier == "main" {
+                    self.program[0] = Call { addr };
+                }
             }
         }
 
-        panic!("'main' not found");
+        Ok(self.program)
     }
 
     fn generate_statement(
@@ -269,38 +300,33 @@ impl<'syn> Generator<'syn> {
         stmts: &Pool<Stmt<'syn>>,
         exprs: &Pool<Expr<'syn>>,
         stmt: Handle<Stmt<'syn>>,
-    ) {
+    ) -> Result<(), Error<'syn>> {
         match stmts.get(stmt) {
             Stmt::Expr(expr) => {
-                self.generate_expression(stmts, exprs, *expr);
+                self.generate_expression(stmts, exprs, *expr)?;
             }
-            Stmt::SymbolDecl { name, info } => match info {
+            Stmt::SymbolDecl(SymbolDecl { identifier, info }) => match info {
                 SymbolInfo::Fn(expr) => {
-                    self.push_frame();
-
-                    let prologue_addr = self.generate_prologue();
-                    self.generate_expression(stmts, exprs, *expr);
-
-                    self.generate_epilogue();
-                    self.patch_prologue(prologue_addr);
-
-                    self.pop_frame();
+                    self.queue_function_generation(identifier, *expr)?;
                 }
                 SymbolInfo::Var(VarInfo::Value(expr)) => {
                     let reg = self.allocate_reg();
-                    self.current_frame().symbols.insert(name, reg);
+
+                    self.envs
+                        .declare_symbol(identifier, Symbol::Variable(reg))?;
 
                     self.override_next_allocated_register = Some(reg);
-                    self.generate_expression(stmts, exprs, *expr);
+                    self.generate_expression(stmts, exprs, *expr)?;
                 }
 
                 _ => unimplemented!(),
             },
             Stmt::Print(expr) => {
-                let reg = self.generate_expression(stmts, exprs, *expr);
+                let reg = self.generate_expression(stmts, exprs, *expr)?;
                 self.program.push(Print { reg });
             }
         }
+        Ok(())
     }
 
     fn generate_expression(
@@ -308,13 +334,13 @@ impl<'syn> Generator<'syn> {
         stmts: &Pool<Stmt<'syn>>,
         exprs: &Pool<Expr<'syn>>,
         expr: Handle<Expr<'syn>>,
-    ) -> u8 {
+    ) -> Result<u8, Error<'syn>> {
         match exprs.get(expr) {
             Expr::Binary { left, op, right } => {
                 let dst = self.allocate_reg();
                 let op = match (exprs.get(*left), op, exprs.get(*right)) {
                     (_, BinaryOp::Add, Expr::Literal(Literal::Number(imm))) => {
-                        let left = self.generate_expression(stmts, exprs, *left);
+                        let left = self.generate_expression(stmts, exprs, *left)?;
                         AddRegImm {
                             dst,
                             left,
@@ -322,7 +348,7 @@ impl<'syn> Generator<'syn> {
                         }
                     }
                     (Expr::Literal(Literal::Number(imm)), BinaryOp::Add, _) => {
-                        let right = self.generate_expression(stmts, exprs, *right);
+                        let right = self.generate_expression(stmts, exprs, *right)?;
                         AddImmReg {
                             dst,
                             left: *imm,
@@ -330,7 +356,7 @@ impl<'syn> Generator<'syn> {
                         }
                     }
                     (_, BinaryOp::Sub, Expr::Literal(Literal::Number(imm))) => {
-                        let left = self.generate_expression(stmts, exprs, *left);
+                        let left = self.generate_expression(stmts, exprs, *left)?;
                         SubRegImm {
                             dst,
                             left,
@@ -338,7 +364,7 @@ impl<'syn> Generator<'syn> {
                         }
                     }
                     (Expr::Literal(Literal::Number(imm)), BinaryOp::Sub, _) => {
-                        let right = self.generate_expression(stmts, exprs, *right);
+                        let right = self.generate_expression(stmts, exprs, *right)?;
                         SubImmReg {
                             dst,
                             left: *imm,
@@ -346,7 +372,7 @@ impl<'syn> Generator<'syn> {
                         }
                     }
                     (_, BinaryOp::Div, Expr::Literal(Literal::Number(imm))) => {
-                        let left = self.generate_expression(stmts, exprs, *left);
+                        let left = self.generate_expression(stmts, exprs, *left)?;
                         DivRegImm {
                             dst,
                             left,
@@ -354,7 +380,7 @@ impl<'syn> Generator<'syn> {
                         }
                     }
                     (Expr::Literal(Literal::Number(imm)), BinaryOp::Div, _) => {
-                        let right = self.generate_expression(stmts, exprs, *right);
+                        let right = self.generate_expression(stmts, exprs, *right)?;
                         DivImmReg {
                             dst,
                             left: *imm,
@@ -362,7 +388,7 @@ impl<'syn> Generator<'syn> {
                         }
                     }
                     (_, BinaryOp::Mul, Expr::Literal(Literal::Number(imm))) => {
-                        let left = self.generate_expression(stmts, exprs, *left);
+                        let left = self.generate_expression(stmts, exprs, *left)?;
                         MulRegImm {
                             dst,
                             left,
@@ -370,7 +396,7 @@ impl<'syn> Generator<'syn> {
                         }
                     }
                     (Expr::Literal(Literal::Number(imm)), BinaryOp::Mul, _) => {
-                        let right = self.generate_expression(stmts, exprs, *right);
+                        let right = self.generate_expression(stmts, exprs, *right)?;
                         MulImmReg {
                             dst,
                             left: *imm,
@@ -378,8 +404,8 @@ impl<'syn> Generator<'syn> {
                         }
                     }
                     _ => {
-                        let left = self.generate_expression(stmts, exprs, *left);
-                        let right = self.generate_expression(stmts, exprs, *right);
+                        let left = self.generate_expression(stmts, exprs, *left)?;
+                        let right = self.generate_expression(stmts, exprs, *right)?;
                         match op {
                             BinaryOp::Add => Add { dst, left, right },
                             BinaryOp::Sub => Sub { dst, left, right },
@@ -389,62 +415,80 @@ impl<'syn> Generator<'syn> {
                     }
                 };
                 self.program.push(op);
-                dst
+                Ok(dst)
             }
             Expr::Literal(literal) => match literal {
                 Literal::Number(number) => {
                     let dst = self.allocate_reg();
                     self.program.push(LoadImm { dst, imm: *number });
-                    dst
+                    Ok(dst)
                 }
             },
-            Expr::Symbol(name) => {
-                #[cfg(debug_assertions)]
-                {
-                    if let Some(reg) = self.current_frame().symbols.get(name) {
-                        *reg
-                    } else {
-                        panic!("Undefined identifier {}", name)
-                    }
-                }
-                #[cfg(not(debug_assertions))]
-                {
-                    unsafe { *self.current_frame().symbols.get(name).unwrap_unchecked() }
-                }
-            }
+            Expr::Symbol(identifier) => match self.envs.find_symbol(identifier)? {
+                Symbol::Variable(reg) => Ok(*reg),
+                _ => Err(Error::SymbolIsNotVariable(identifier)),
+            },
             Expr::Block(block_stmts) => {
+                self.envs.push();
+
+                // TODO: Populate this register.
                 let dst = self.allocate_reg();
                 for stmt in block_stmts {
-                    self.generate_statement(stmts, exprs, *stmt);
+                    self.generate_statement(stmts, exprs, *stmt)?;
                 }
-                dst
+
+                self.envs.pop();
+
+                Ok(dst)
             }
         }
     }
 
-    #[inline(always)]
-    fn push_frame(&mut self) {
-        self.frames.push(Frame::new());
+    fn generate_function(
+        &mut self,
+        stmts: &Pool<Stmt<'syn>>,
+        exprs: &Pool<Expr<'syn>>,
+        identifier: &'syn str,
+        expr: Handle<Expr<'syn>>,
+    ) -> Result<Word, Error<'syn>> {
+        let prologue_addr = self.generate_prologue();
+
+        self.envs.push_function_frame(identifier);
+
+        self.generate_expression(stmts, exprs, expr)?;
+
+        self.generate_epilogue();
+        self.patch_prologue(prologue_addr);
+
+        self.envs.pop_function_frame();
+
+        Ok(prologue_addr as Word)
+    }
+
+    fn queue_function_generation(
+        &mut self,
+        identifier: &'syn str,
+        expr: Handle<Expr<'syn>>,
+    ) -> Result<(), Error<'syn>> {
+        // FIXME: Encode the fact that this function is not yet completed somehow,
+        //        then generate `Call`s to it in a special way, maybe a `ToBePatchedCall` opcode or
+        //        something, then iterate the active function frame when this function is
+        //        eventually generated and patch those special opcodes with the correct address.
+        self.envs.declare_symbol(identifier, Symbol::Function(0))?;
+
+        self.function_generation_queue.push(SymbolDecl {
+            identifier,
+            info: SymbolInfo::Fn(expr),
+        });
+
+        Ok(())
     }
 
     #[inline(always)]
-    fn pop_frame(&mut self) {
-        #[cfg(debug_assertions)]
-        self.frames
-            .pop()
-            .expect("This can't happen - a frame was just pushed.");
-
-        #[cfg(not(debug_assertions))]
-        unsafe {
-            self.frames.pop().unwrap_unchecked()
-        };
-    }
-
-    #[inline(always)]
-    fn generate_prologue(&mut self) -> usize {
-        // Push a dummy `Reserve`, will be patched up later
+    fn generate_prologue(&mut self) -> Word {
+        // This dummy value of `0` will be patched up later.
         self.program.push(Reserve { num_regs: 0 });
-        self.program.len() - 1
+        (self.program.len() - 1) as Word
     }
 
     #[inline(always)]
@@ -453,18 +497,18 @@ impl<'syn> Generator<'syn> {
     }
 
     #[inline(always)]
-    fn patch_prologue(&mut self, prologue_addr: usize) {
+    fn patch_prologue(&mut self, prologue_addr: Word) {
         #[cfg(debug_assertions)]
         {
-            self.program[prologue_addr] = Reserve {
-                num_regs: self.current_frame().num_registers,
+            self.program[prologue_addr as usize] = Reserve {
+                num_regs: self.envs.active_function_frame().num_registers,
             };
         }
         #[cfg(not(debug_assertions))]
         {
             // Update the previously added `Reserve` op with the number of allocated registers
-            *unsafe { self.program.get_unchecked_mut(prologue_addr) } = Reserve {
-                num_regs: self.current_frame().num_registers,
+            *unsafe { self.program.get_unchecked_mut(prologue_addr as usize) } = Reserve {
+                num_regs: self.envs.active_function_frame().num_registers,
             };
         }
     }
@@ -475,20 +519,8 @@ impl<'syn> Generator<'syn> {
             return reg;
         }
 
-        let count = &mut self.current_frame().num_registers;
+        let count = &mut self.envs.active_function_frame().num_registers;
         mem::replace(count, *count + 1)
-    }
-
-    #[inline(always)]
-    fn current_frame(&mut self) -> &mut Frame<'syn> {
-        #[cfg(debug_assertions)]
-        {
-            self.frames.last_mut().expect("There are no frames")
-        }
-        #[cfg(not(debug_assertions))]
-        {
-            unsafe { self.frames.last_mut().unwrap_unchecked() }
-        }
     }
 }
 
@@ -498,16 +530,181 @@ impl<'syn> Default for Generator<'syn> {
     }
 }
 
-struct Frame<'syn> {
-    num_registers: u8,
-    symbols: HashMap<&'syn str, u8>,
+#[derive(Debug)]
+pub enum Symbol {
+    Variable(u8),
+    Function(Word),
 }
 
-impl<'syn> Frame<'syn> {
+#[derive(Debug)]
+struct EnvManager<'syn> {
+    envs: Vec<Env<'syn>>,
+}
+
+impl<'syn> EnvManager<'syn> {
+    fn with_global_env() -> Self {
+        Self {
+            envs: vec![Env::new()],
+        }
+    }
+
+    #[inline(always)]
+    fn push(&mut self) {
+        self.envs.push(Env::new());
+    }
+
+    #[inline(always)]
+    fn pop(&mut self) {
+        #[cfg(debug_assertions)]
+        dbg!(self
+            .envs
+            .pop()
+            .expect("There should aways be at least one env to pop (the global one)."));
+
+        #[cfg(not(debug_assertions))]
+        unsafe {
+            self.envs.pop().unwrap_unchecked()
+        };
+    }
+
+    fn active_function_frame(&mut self) -> &mut FunctionFrame {
+        #[cfg(debug_assertions)]
+        {
+            self.try_active_function_frame().unwrap()
+        }
+
+        #[cfg(not(debug_assertions))]
+        {
+            unsafe { self.try_active_function_frame().unwrap_unchecked() }
+        }
+    }
+
+    fn try_active_function_frame(&mut self) -> Result<&mut FunctionFrame, Error<'syn>> {
+        for env in self.envs.iter_mut().rev() {
+            if let Some(value) = env.function_frames.last_mut() {
+                // NOTE: This silly transmute can be removed once the borrow checker sees that the
+                // lifetimes are fine.
+                return Ok(unsafe {
+                    std::mem::transmute::<&mut FunctionFrame, &mut FunctionFrame>(value)
+                });
+            }
+        }
+
+        Err(Error::NotInsideFunction)
+    }
+
+    fn find_symbol(&mut self, identifier: &'syn str) -> Result<&mut Symbol, Error<'syn>> {
+        for env in self.envs.iter_mut().rev() {
+            if let Some(value) = env.symbols.get_mut(identifier) {
+                // NOTE: This silly transmute can be removed once the borrow checker sees that the
+                // lifetimes are fine.
+                return Ok(unsafe { std::mem::transmute::<&mut Symbol, &mut Symbol>(value) });
+            }
+        }
+
+        Err(Error::UndeclaredSymbol(identifier))
+    }
+
+    fn declare_symbol(&mut self, identifier: &'syn str, symbol: Symbol) -> Result<(), Error<'syn>> {
+        // Disallow declaring symbols with the same name as the current function, if we are inside
+        // one.
+        if let Ok(frame) = self.try_active_function_frame() {
+            if identifier == frame.function_name {
+                // NOTE: This silly transmute can be removed once the borrow checker sees that the
+                // lifetimes are fine.
+                return Err(unsafe {
+                    std::mem::transmute::<Error, Error>(Error::InvalidShadowing(identifier))
+                });
+            }
+        }
+
+        match self.active().symbols.entry(identifier) {
+            Entry::Occupied(mut entry) => match (entry.get_mut(), symbol) {
+                // Allow variables to shadow other variables.
+                (Symbol::Variable(reg), Symbol::Variable(new_reg)) => *reg = new_reg,
+                // Disallow any other type of shadowing.
+                _ => return Err(Error::InvalidShadowing(identifier)),
+            },
+            Entry::Vacant(entry) => {
+                entry.insert(symbol);
+            }
+        }
+
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn push_function_frame(&mut self, function_name: &'syn str) {
+        self.active()
+            .function_frames
+            .push(FunctionFrame::new(function_name))
+    }
+
+    #[inline(always)]
+    fn pop_function_frame(&mut self) {
+        #[cfg(debug_assertions)]
+        dbg!(self
+            .active()
+            .function_frames
+            .pop()
+            .expect("A function frame should've just been pushed."));
+
+        #[cfg(not(debug_assertions))]
+        unsafe {
+            self.active().function_frames.pop().unwrap_unchecked()
+        };
+    }
+
+    #[inline(always)]
+    fn active(&mut self) -> &mut Env<'syn> {
+        #[cfg(debug_assertions)]
+        {
+            self.envs
+                .last_mut()
+                .expect("There should always be at least one env.")
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            unsafe { self.envs.last_mut().unwrap_unchecked() }
+        }
+    }
+}
+
+#[derive(Debug)]
+struct Env<'syn> {
+    function_frames: Vec<FunctionFrame<'syn>>,
+    symbols: HashMap<&'syn str, Symbol>,
+}
+
+impl<'syn> Env<'syn> {
     fn new() -> Self {
         Self {
-            num_registers: 0,
+            function_frames: Vec::new(),
             symbols: HashMap::new(),
         }
     }
+}
+
+#[derive(Debug)]
+struct FunctionFrame<'syn> {
+    num_registers: u8,
+    function_name: &'syn str,
+}
+
+impl<'syn> FunctionFrame<'syn> {
+    fn new(function_name: &'syn str) -> Self {
+        Self {
+            num_registers: 0,
+            function_name,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Error<'syn> {
+    NotInsideFunction,
+    InvalidMainDeclaration,
+    UndeclaredSymbol(&'syn str),
+    InvalidShadowing(&'syn str),
+    SymbolIsNotVariable(&'syn str),
 }
