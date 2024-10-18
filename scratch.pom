@@ -1,5 +1,8 @@
+other: fn = {
+    print 5;
+};
+
 main: fn = {
-    x := 100;
-    y := 20 + 3;
-    print x + y;
+    test := 100 + 100;
+    print test;
 };

@@ -100,6 +100,8 @@ impl<T> Handle<T> {
 
 impl<T> std::fmt::Debug for Handle<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Handle({})", self.idx)
+        let mut type_name = std::any::type_name::<T>().to_owned();
+        type_name.drain(..type_name.rfind(':').map(|i| i + 1).unwrap_or(0));
+        write!(f, "Handle<{}>({})", type_name, self.idx)
     }
 }

@@ -31,6 +31,7 @@ pub struct Parser<'lex, I: Iterator + std::fmt::Debug> {
     tokens: Peekable<I>,
     exprs: Pool<Expr<'lex>>,
     stmts: Pool<Stmt<'lex>>,
+    outer_stmts: Pool<Stmt<'lex>>,
     errors: Vec<Error>,
     override_expr: Option<Handle<Expr<'lex>>>,
 }
@@ -41,33 +42,46 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
             tokens: tokens.into_iter().peekable(),
             exprs: Pool::new(),
             stmts: Pool::new(),
+            outer_stmts: Pool::new(),
             errors: Vec::new(),
             override_expr: None,
         }
     }
 
-    pub fn parse(mut self) -> (Pool<Stmt<'lex>>, Pool<Expr<'lex>>, Vec<Error>) {
+    pub fn parse(
+        mut self,
+    ) -> (
+        Pool<Stmt<'lex>>,
+        Pool<Stmt<'lex>>,
+        Pool<Expr<'lex>>,
+        Vec<Error>,
+    ) {
         self.parse_program();
-        (self.stmts, self.exprs, self.errors)
+        (self.outer_stmts, self.stmts, self.exprs, self.errors)
     }
 
     fn parse_program(&mut self) {
         while let Missing(_) = chase!(self.tokens, Token::EndOfFile) {
-            if let Err(error) = self.parse_statement() {
-                self.errors.push(error);
-                self.synchronize();
+            match self.parse_statement() {
+                Ok(stmt) => {
+                    self.outer_stmts.add(stmt);
+                }
+                Err(err) => {
+                    self.errors.push(err);
+                    self.synchronize();
+                }
             }
         }
     }
 
-    fn parse_statement(&mut self) -> Result<Handle<Stmt<'lex>>, Error> {
+    fn parse_statement(&mut self) -> Result<Stmt<'lex>, Error> {
         match chase!(self.tokens, Token::Print | Token::Symbol(_)) {
             Caught(Token::Symbol(name)) => match chase!(self.tokens, Token::Colon) {
                 Caught(_) => match chase!(self.tokens, Token::Equal | Token::Fn) {
                     Caught(Token::Equal) => {
                         let expr = self.parse_expression_and_semicolon()?;
-                        Ok(self.stmts.add(Stmt::SymbolDecl {
-                            name,
+                        Ok(Stmt::SymbolDecl(SymbolDecl {
+                            identifier: name,
                             info: SymbolInfo::Var(VarInfo::Value(expr)),
                         }))
                     }
@@ -80,8 +94,8 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
                         }
 
                         let expr = self.parse_expression_and_semicolon()?;
-                        Ok(self.stmts.add(Stmt::SymbolDecl {
-                            name,
+                        Ok(Stmt::SymbolDecl(SymbolDecl {
+                            identifier: name,
                             info: SymbolInfo::Fn(expr),
                         }))
                     }
@@ -99,7 +113,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
             },
             Caught(Token::Print) => {
                 let expr = self.parse_expression_and_semicolon()?;
-                Ok(self.stmts.add(Stmt::Print(expr)))
+                Ok(Stmt::Print(expr))
             }
             Missing(_) => self.parse_statement_expression(),
 
@@ -108,9 +122,9 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
         }
     }
 
-    fn parse_statement_expression(&mut self) -> Result<Handle<Stmt<'lex>>, Error> {
+    fn parse_statement_expression(&mut self) -> Result<Stmt<'lex>, Error> {
         let expr = self.parse_expression_and_semicolon()?;
-        Ok(self.stmts.add(Stmt::Expr(expr)))
+        Ok(Stmt::Expr(expr))
     }
 
     fn parse_expression(&mut self) -> Result<Handle<Expr<'lex>>, Error> {
@@ -192,7 +206,8 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
             SpannedCaught(Token::LeftBrace, _) => {
                 let mut exprs = Vec::new();
                 while let Missing(_) = chase!(self.tokens, Token::RightBrace) {
-                    exprs.push(self.parse_statement()?);
+                    let stmt = self.parse_statement()?;
+                    exprs.push(self.stmts.add(stmt));
                 }
                 Ok(self.exprs.add(Expr::Block(exprs)))
             }
@@ -242,11 +257,14 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
 #[derive(Debug, Clone)]
 pub enum Stmt<'lex> {
     Expr(Handle<Expr<'lex>>),
-    SymbolDecl {
-        name: &'lex str,
-        info: SymbolInfo<'lex>,
-    },
+    SymbolDecl(SymbolDecl<'lex>),
     Print(Handle<Expr<'lex>>),
+}
+
+#[derive(Debug, Clone)]
+pub struct SymbolDecl<'lex> {
+    pub identifier: &'lex str,
+    pub info: SymbolInfo<'lex>,
 }
 
 #[derive(Debug, Clone)]
