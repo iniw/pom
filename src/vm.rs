@@ -54,20 +54,9 @@ impl<'gen> Processor<'gen> {
                 Op::LoadImm { dst, imm } => *self.reg(dst) = Reg(imm),
 
                 Op::Add { dst, left, right } => *self.reg(dst) = *self.reg(left) + *self.reg(right),
-                Op::AddRegImm { dst, left, right } => *self.reg(dst) = *self.reg(left) + right,
-                Op::AddImmReg { dst, left, right } => *self.reg(dst) = left + *self.reg(right),
-
                 Op::Sub { dst, left, right } => *self.reg(dst) = *self.reg(left) - *self.reg(right),
-                Op::SubRegImm { dst, left, right } => *self.reg(dst) = *self.reg(left) - right,
-                Op::SubImmReg { dst, left, right } => *self.reg(dst) = left - *self.reg(right),
-
                 Op::Div { dst, left, right } => *self.reg(dst) = *self.reg(left) / *self.reg(right),
-                Op::DivRegImm { dst, left, right } => *self.reg(dst) = *self.reg(left) / right,
-                Op::DivImmReg { dst, left, right } => *self.reg(dst) = left / *self.reg(right),
-
                 Op::Mul { dst, left, right } => *self.reg(dst) = *self.reg(left) * *self.reg(right),
-                Op::MulRegImm { dst, left, right } => *self.reg(dst) = *self.reg(left) * right,
-                Op::MulImmReg { dst, left, right } => *self.reg(dst) = left * *self.reg(right),
 
                 Op::Print { reg } => {
                     println!("(vm): {}", self.reg(reg).0);
@@ -214,20 +203,9 @@ pub enum Op {
     LoadImm { dst: u8, imm: Word },
 
     Add { dst: u8, left: u8, right: u8 },
-    AddRegImm { dst: u8, left: u8, right: Word },
-    AddImmReg { dst: u8, left: Word, right: u8 },
-
     Sub { dst: u8, left: u8, right: u8 },
-    SubRegImm { dst: u8, left: u8, right: Word },
-    SubImmReg { dst: u8, left: Word, right: u8 },
-
     Div { dst: u8, left: u8, right: u8 },
-    DivRegImm { dst: u8, left: u8, right: Word },
-    DivImmReg { dst: u8, left: Word, right: u8 },
-
     Mul { dst: u8, left: u8, right: u8 },
-    MulRegImm { dst: u8, left: u8, right: Word },
-    MulImmReg { dst: u8, left: Word, right: u8 },
 
     Print { reg: u8 },
 
@@ -338,81 +316,13 @@ impl<'syn> Generator<'syn> {
         match exprs.get(expr) {
             Expr::Binary { left, op, right } => {
                 let dst = self.allocate_reg();
-                let op = match (exprs.get(*left), op, exprs.get(*right)) {
-                    (_, BinaryOp::Add, Expr::Literal(Literal::Number(imm))) => {
-                        let left = self.generate_expression(stmts, exprs, *left)?;
-                        AddRegImm {
-                            dst,
-                            left,
-                            right: *imm,
-                        }
-                    }
-                    (Expr::Literal(Literal::Number(imm)), BinaryOp::Add, _) => {
-                        let right = self.generate_expression(stmts, exprs, *right)?;
-                        AddImmReg {
-                            dst,
-                            left: *imm,
-                            right,
-                        }
-                    }
-                    (_, BinaryOp::Sub, Expr::Literal(Literal::Number(imm))) => {
-                        let left = self.generate_expression(stmts, exprs, *left)?;
-                        SubRegImm {
-                            dst,
-                            left,
-                            right: *imm,
-                        }
-                    }
-                    (Expr::Literal(Literal::Number(imm)), BinaryOp::Sub, _) => {
-                        let right = self.generate_expression(stmts, exprs, *right)?;
-                        SubImmReg {
-                            dst,
-                            left: *imm,
-                            right,
-                        }
-                    }
-                    (_, BinaryOp::Div, Expr::Literal(Literal::Number(imm))) => {
-                        let left = self.generate_expression(stmts, exprs, *left)?;
-                        DivRegImm {
-                            dst,
-                            left,
-                            right: *imm,
-                        }
-                    }
-                    (Expr::Literal(Literal::Number(imm)), BinaryOp::Div, _) => {
-                        let right = self.generate_expression(stmts, exprs, *right)?;
-                        DivImmReg {
-                            dst,
-                            left: *imm,
-                            right,
-                        }
-                    }
-                    (_, BinaryOp::Mul, Expr::Literal(Literal::Number(imm))) => {
-                        let left = self.generate_expression(stmts, exprs, *left)?;
-                        MulRegImm {
-                            dst,
-                            left,
-                            right: *imm,
-                        }
-                    }
-                    (Expr::Literal(Literal::Number(imm)), BinaryOp::Mul, _) => {
-                        let right = self.generate_expression(stmts, exprs, *right)?;
-                        MulImmReg {
-                            dst,
-                            left: *imm,
-                            right,
-                        }
-                    }
-                    _ => {
-                        let left = self.generate_expression(stmts, exprs, *left)?;
-                        let right = self.generate_expression(stmts, exprs, *right)?;
-                        match op {
-                            BinaryOp::Add => Add { dst, left, right },
-                            BinaryOp::Sub => Sub { dst, left, right },
-                            BinaryOp::Div => Div { dst, left, right },
-                            BinaryOp::Mul => Mul { dst, left, right },
-                        }
-                    }
+                let left = self.generate_expression(stmts, exprs, *left)?;
+                let right = self.generate_expression(stmts, exprs, *right)?;
+                let op = match op {
+                    BinaryOp::Add => Add { dst, left, right },
+                    BinaryOp::Sub => Sub { dst, left, right },
+                    BinaryOp::Div => Div { dst, left, right },
+                    BinaryOp::Mul => Mul { dst, left, right },
                 };
                 self.program.push(op);
                 Ok(dst)
