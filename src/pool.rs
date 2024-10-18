@@ -24,10 +24,13 @@ impl<T> Pool<T> {
     }
 
     pub fn handles(&self) -> PoolHandleIter<T> {
-        PoolHandleIter {
-            pool: self,
-            index: 0,
-        }
+        PoolHandleIter::new(self)
+    }
+}
+
+impl<T> Default for Pool<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -50,35 +53,40 @@ impl<'a, T> IntoIterator for &'a Pool<T> {
 }
 
 pub struct PoolHandleIter<'a, T> {
-    pool: &'a Pool<T>,
-    index: usize,
+    inner: std::ops::Range<u32>,
+    _phantom: std::marker::PhantomData<&'a Pool<T>>,
+}
+
+impl<'a, T> PoolHandleIter<'a, T> {
+    pub fn new(pool: &'a Pool<T>) -> Self {
+        Self {
+            inner: 0..pool.0.len() as u32,
+            _phantom: std::marker::PhantomData,
+        }
+    }
 }
 
 impl<'a, T> Iterator for PoolHandleIter<'a, T> {
     type Item = Handle<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.pool.0.len() {
-            let handle = Handle::new(self.index as u32);
-            self.index += 1;
-            Some(handle)
-        } else {
-            None
-        }
+        self.inner.next().map(Handle::new)
     }
 }
 
-impl<T> Default for Pool<T> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub struct Handle<T> {
     idx: u32,
     _phantom: std::marker::PhantomData<T>,
 }
+
+impl<T> Clone for Handle<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T> Copy for Handle<T> {}
 
 impl<T> Handle<T> {
     #[inline]
