@@ -2,7 +2,7 @@ use std::{collections::HashMap, mem};
 
 use crate::{
     pool::{Handle, Pool},
-    syn::{BinaryOp, Expr, Literal, Stmt, SymbolKind},
+    syn::{BinaryOp, Expr, Literal, Stmt, SymbolInfo, VarInfo},
 };
 
 pub struct Processor<'gen> {
@@ -257,23 +257,13 @@ impl<'syn> Generator<'syn> {
     // FIXME: Propagate errors here and in the generators.
     pub fn generate(mut self, stmts: Pool<Stmt<'syn>>, exprs: Pool<Expr<'syn>>) -> Vec<Op> {
         for stmt in stmts.handles() {
-            match stmts.get(stmt) {
-                Stmt::SymbolDecl {
-                    name: "main",
-                    kind: Some(SymbolKind::Fn),
-                    expr: Some(_),
-                } => {
-                    self.generate_statement(&stmts, &exprs, stmt);
-                    return self.program;
-                }
-                Stmt::SymbolDecl {
-                    name: "main",
-                    kind: Some(SymbolKind::Fn),
-                    expr: None,
-                } => {
-                    panic!("Please give 'main' a body.");
-                }
-                _ => (),
+            if let Stmt::SymbolDecl {
+                name: "main",
+                info: SymbolInfo::Fn(_),
+            } = stmts.get(stmt)
+            {
+                self.generate_statement(&stmts, &exprs, stmt);
+                return self.program;
             }
         }
 
@@ -290,30 +280,27 @@ impl<'syn> Generator<'syn> {
             Stmt::Expr(expr) => {
                 self.generate_expression(stmts, exprs, *expr);
             }
-            Stmt::SymbolDecl { name, kind, expr } => match kind {
-                Some(SymbolKind::Fn) => {
+            Stmt::SymbolDecl { name, info } => match info {
+                SymbolInfo::Fn(expr) => {
                     self.push_frame();
 
                     let prologue_addr = self.generate_prologue();
-                    if let Some(expr) = expr {
-                        self.generate_expression(stmts, exprs, *expr);
-                    } else {
-                        panic!("Please give {} a body", *name);
-                    }
+                    self.generate_expression(stmts, exprs, *expr);
 
                     self.generate_epilogue();
                     self.patch_prologue(prologue_addr);
 
                     self.pop_frame();
                 }
-                None => {
+                SymbolInfo::Var(VarInfo::Value(expr)) => {
                     let reg = self.allocate_reg();
                     self.current_frame().symbols.insert(name, reg);
-                    if let Some(expr) = expr {
-                        self.override_next_allocated_register = Some(reg);
-                        self.generate_expression(stmts, exprs, *expr);
-                    }
+
+                    self.override_next_allocated_register = Some(reg);
+                    self.generate_expression(stmts, exprs, *expr);
                 }
+
+                _ => unimplemented!(),
             },
             Stmt::Print(expr) => {
                 let reg = self.generate_expression(stmts, exprs, *expr);
@@ -433,10 +420,11 @@ impl<'syn> Generator<'syn> {
                 }
             }
             Expr::Block(block_stmts) => {
+                let dst = self.allocate_reg();
                 for stmt in block_stmts {
                     self.generate_statement(stmts, exprs, *stmt);
                 }
-                self.allocate_reg()
+                dst
             }
         }
     }

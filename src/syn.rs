@@ -68,8 +68,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
                         let expr = self.parse_expression_and_semicolon()?;
                         Ok(self.stmts.add(Stmt::SymbolDecl {
                             name,
-                            kind: None,
-                            expr: Some(expr),
+                            info: SymbolInfo::Var(VarInfo::Value(expr)),
                         }))
                     }
                     Caught(Token::Fn) => {
@@ -83,8 +82,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
                         let expr = self.parse_expression_and_semicolon()?;
                         Ok(self.stmts.add(Stmt::SymbolDecl {
                             name,
-                            kind: Some(SymbolKind::Fn),
-                            expr: Some(expr),
+                            info: SymbolInfo::Fn(expr),
                         }))
                     }
                     Missing(token) => Err(Error {
@@ -92,8 +90,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
                         span: token.span,
                     }),
 
-                    // This is just here to make the compiler shut up about missing match arms.
-                    _ => unreachable!(),
+                    _ => unimplemented!("Implement other kinds"),
                 },
                 Missing(_) => {
                     self.override_expr = Some(self.exprs.add(Expr::Symbol(name)));
@@ -247,8 +244,7 @@ pub enum Stmt<'lex> {
     Expr(Handle<Expr<'lex>>),
     SymbolDecl {
         name: &'lex str,
-        kind: Option<SymbolKind>,
-        expr: Option<Handle<Expr<'lex>>>,
+        info: SymbolInfo<'lex>,
     },
     Print(Handle<Expr<'lex>>),
 }
@@ -279,8 +275,16 @@ pub enum BinaryOp {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum SymbolKind {
-    Fn,
+pub enum VarInfo<'lex> {
+    Type(&'lex str),
+    Value(Handle<Expr<'lex>>),
+    TypeAndValue(&'lex str, Handle<Expr<'lex>>),
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum SymbolInfo<'lex> {
+    Var(VarInfo<'lex>),
+    Fn(Handle<Expr<'lex>>),
 }
 
 #[derive(Debug, Copy, Clone)]
