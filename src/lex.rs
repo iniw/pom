@@ -69,6 +69,7 @@ impl<'src> Lexer<'src> {
                     "fn" => Ok(Some(Token::Fn)),
                     "type" => Ok(Some(Token::Type)),
                     "return" => Ok(Some(Token::Return)),
+                    "print" => Ok(Some(Token::Print)),
                     symbol => Ok(Some(Token::Symbol(symbol))),
                 }
             }
@@ -181,6 +182,7 @@ pub enum Token<'src> {
     Minus,
     Slash,
     Star,
+    Print,
 
     // Parenthesis
     LeftParenthesis,

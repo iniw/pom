@@ -2,6 +2,7 @@ use std::{env, fs, path::PathBuf, time};
 
 use pom::{lex, syn, vm};
 
+#[allow(unused_variables)]
 fn main() {
     // Skip the filepath
     let args = env::args().skip(1);
@@ -20,6 +21,7 @@ fn main() {
         let lexer = lex::Lexer::new(&src);
         let (tokens, errors) = lexer.lex();
 
+        #[cfg(debug_assertions)]
         if !errors.is_empty() {
             eprintln!("Lexing errors:");
             for e in errors {
@@ -28,6 +30,7 @@ fn main() {
             eprintln!();
         }
 
+        #[cfg(debug_assertions)]
         if !tokens.is_empty() {
             eprintln!("Tokens:");
             for t in &tokens {
@@ -39,6 +42,7 @@ fn main() {
         let parser = syn::Parser::new(tokens);
         let (stmts, exprs, errors) = parser.parse();
 
+        #[cfg(debug_assertions)]
         if !stmts.is_empty() {
             eprintln!("Statements:");
             for s in &stmts {
@@ -47,6 +51,7 @@ fn main() {
             eprintln!();
         }
 
+        #[cfg(debug_assertions)]
         if !exprs.is_empty() {
             eprintln!("Expressions:");
             for e in &exprs {
@@ -68,6 +73,7 @@ fn main() {
             let cpu = vm::Processor::new(&program);
             cpu.run();
 
+            #[cfg(debug_assertions)]
             dbg!(&program);
         }
 
