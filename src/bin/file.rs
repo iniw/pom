@@ -61,16 +61,16 @@ fn main() {
                 eprintln!("  - {}", e.render(&src))
             }
             eprintln!();
+        } else {
+            let gen = vm::Generator::new();
+            let program = gen.generate(stmts, exprs);
+
+            let cpu = vm::Processor::new(&program);
+            cpu.run();
+
+            dbg!(&program);
         }
 
-        let gen = vm::Generator::new();
-        let program = gen.generate(stmts, exprs);
-
-        let cpu = vm::Processor::new(&program);
-        cpu.run();
-
         println!("Total execution took: {:?}", start.elapsed());
-
-        dbg!(&program);
     }
 }

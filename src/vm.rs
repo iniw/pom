@@ -1,4 +1,4 @@
-use std::mem;
+use std::{collections::HashMap, mem};
 
 use crate::{
     pool::{Handle, Pool},
@@ -175,20 +175,20 @@ pub enum Op {
 
 use Op::*;
 
-pub struct Generator {
+pub struct Generator<'syn> {
     program: Vec<Op>,
-    stack_frames_reg_count: Vec<u8>,
+    frames: Vec<Frame<'syn>>,
 }
 
-impl Generator {
+impl<'syn> Generator<'syn> {
     pub fn new() -> Self {
         Self {
             program: vec![Call { addr: 2 }, Halt],
-            stack_frames_reg_count: Vec::new(),
+            frames: Vec::new(),
         }
     }
 
-    pub fn generate(mut self, stmts: Pool<Stmt>, exprs: Pool<Expr>) -> Vec<Op> {
+    pub fn generate(mut self, stmts: Pool<Stmt<'syn>>, exprs: Pool<Expr<'syn>>) -> Vec<Op> {
         for stmt in stmts.handles() {
             self.generate_statement(&stmts, &exprs, stmt);
         }
@@ -196,19 +196,45 @@ impl Generator {
         self.program
     }
 
-    fn generate_statement(&mut self, stmts: &Pool<Stmt>, exprs: &Pool<Expr>, stmt: Handle<Stmt>) {
+    fn generate_statement(
+        &mut self,
+        stmts: &Pool<Stmt<'syn>>,
+        exprs: &Pool<Expr<'syn>>,
+        stmt: Handle<Stmt<'syn>>,
+    ) {
         match stmts.get(stmt) {
             Stmt::Expr(expr) => {
-                self.stack_frames_reg_count.push(0);
+                self.frames.push(Frame::new());
 
                 let prologue_addr = self.generate_prologue();
                 self.generate_expression(exprs, *expr);
                 self.generate_epilogue();
                 self.patch_prologue(prologue_addr);
 
-                unsafe { self.stack_frames_reg_count.pop().unwrap_unchecked() };
+                unsafe { self.frames.pop().unwrap_unchecked() };
             }
-            Stmt::Empty => (),
+            #[expect(unused_variables)]
+            Stmt::SymbolDecl { name, kind, expr } => {
+                self.frames.push(Frame::new());
+
+                let prologue_addr = self.generate_prologue();
+
+                let reg = self.allocate_reg();
+                let frame = self.current_frame();
+                frame.symbols.insert(name, reg);
+                if let Some(expr) = expr {
+                    let expr = self.generate_expression(exprs, *expr);
+                    self.program.push(Load {
+                        dst: reg,
+                        src: expr,
+                    });
+                }
+
+                self.generate_epilogue();
+                self.patch_prologue(prologue_addr);
+
+                unsafe { self.frames.pop().unwrap_unchecked() };
+            }
         }
     }
 
@@ -235,6 +261,9 @@ impl Generator {
                     dst
                 }
             },
+            Expr::Symbol(name) => unsafe {
+                *self.current_frame().symbols.get(name).unwrap_unchecked()
+            },
         }
     }
 
@@ -254,19 +283,38 @@ impl Generator {
     fn patch_prologue(&mut self, prologue_addr: usize) {
         // Update the previously added `Reserve` op with the number of allocated registers
         *unsafe { self.program.get_unchecked_mut(prologue_addr) } = Reserve {
-            num_regs: *unsafe { self.stack_frames_reg_count.last_mut().unwrap_unchecked() },
+            num_regs: self.current_frame().num_registers,
         };
     }
 
     #[inline(always)]
     fn allocate_reg(&mut self) -> u8 {
-        let count = unsafe { self.stack_frames_reg_count.last_mut().unwrap_unchecked() };
+        let count = &mut self.current_frame().num_registers;
         mem::replace(count, *count + 1)
+    }
+
+    #[inline(always)]
+    fn current_frame(&mut self) -> &mut Frame<'syn> {
+        unsafe { self.frames.last_mut().unwrap_unchecked() }
     }
 }
 
-impl Default for Generator {
+impl<'syn> Default for Generator<'syn> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+struct Frame<'syn> {
+    num_registers: u8,
+    symbols: HashMap<&'syn str, u8>,
+}
+
+impl<'syn> Frame<'syn> {
+    fn new() -> Self {
+        Self {
+            num_registers: 0,
+            symbols: HashMap::new(),
+        }
     }
 }
