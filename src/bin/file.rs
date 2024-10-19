@@ -1,6 +1,10 @@
 use std::{env, fs, path::PathBuf, time};
 
-use pom::{lex, syn, vm};
+use pom::{
+    lex,
+    syn::{self, ParseResult},
+    vm,
+};
 
 #[allow(unused_variables)]
 fn main() {
@@ -40,7 +44,12 @@ fn main() {
         }
 
         let parser = syn::Parser::new(tokens);
-        let (outer_stmts, stmts, exprs, errors) = parser.parse();
+        let ParseResult {
+            outer_stmts,
+            stmts,
+            exprs,
+            errors,
+        } = parser.parse();
 
         #[cfg(debug_assertions)]
         if !stmts.is_empty() {
