@@ -5,24 +5,15 @@ use crate::{
     pool::{Handle, Pool},
 };
 
-macro_rules! spanned_chase {
+macro_rules! chase {
     ($tokens:expr, $pattern:pat $(if $guard:expr)? $(,)?) => {{
-        if let Some(ctx) = $tokens.next_if(|next| match **next {
+        if let Some(token) = $tokens.next_if(|next| match **next {
                 $pattern $(if $guard)? => true,
                 _ => false,
             }) {
-            SpannedChaseResult::SpannedCaught(*ctx, ctx.span)
+            ChaseResult::Caught(token)
         } else {
-            SpannedChaseResult::SpannedMissing(*$tokens.peek().expect("ICE: Shouldn't reach end of token stream when chasing."))
-        }
-    }};
-}
-
-macro_rules! chase {
-    ($tokens:expr, $pattern:pat $(if $guard:expr)? $(,)?) => {{
-        match spanned_chase!($tokens, $pattern $(if $guard)?) {
-            SpannedChaseResult::SpannedCaught(token, _) => ChaseResult::Caught(token),
-            SpannedChaseResult::SpannedMissing(token) => ChaseResult::Missing(token),
+            ChaseResult::Missing(*$tokens.peek().expect("ICE: Shouldn't reach end of token stream when chasing."))
         }
     }};
 }
@@ -54,6 +45,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
             errors: Vec::new(),
 
             stmts_span_stack: Vec::new(),
+            // FIXME: Do this correctly. Fuck.
             exprs_span_stack: Vec::new(),
 
             override_expr: None,
@@ -87,49 +79,59 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
     }
 
     fn parse_statement(&mut self) -> Result<Spanned<Stmt<'lex>>, Error> {
-        self.stmt_span_begin();
+        self.statement_span_checkpoint();
 
-        match spanned_chase!(self.tokens, Token::Print | Token::Symbol(_)) {
-            SpannedCaught(Token::Symbol(name), span) => match chase!(self.tokens, Token::Colon) {
-                Caught(_) => match chase!(self.tokens, Token::Equal | Token::Fn) {
-                    Caught(Token::Equal) => {
-                        let expr = self.parse_expression_and_semicolon()?;
-                        Ok(self.new_stmt(Stmt::SymbolDecl(SymbolDecl {
-                            identifier: name,
-                            info: SymbolInfo::Var(VarInfo::Value(expr)),
-                        })))
-                    }
-                    Caught(Token::Fn) => {
-                        if let Missing(token) = chase!(self.tokens, Token::Equal) {
-                            return Err(Error(Spanned::new(
-                                ErrorKind::UnexpectedToken,
-                                token.span,
-                            )));
+        match chase!(self.tokens, Token::Symbol(_) | Token::Print) {
+            Caught(Spanned(token, span)) => match token {
+                Token::Symbol(identifier) => match chase!(self.tokens, Token::Colon) {
+                    Caught(_) => match chase!(self.tokens, Token::Equal | Token::Fn) {
+                        Caught(Spanned(token, _)) => match token {
+                            Token::Equal => {
+                                let expr = self.parse_expression_and_semicolon()?;
+                                Ok(self.new_stmt(Stmt::SymbolDecl(SymbolDecl {
+                                    identifier,
+                                    info: SymbolInfo::Var(VarInfo::Value(expr)),
+                                })))
+                            }
+                            Token::Fn => {
+                                if let Missing(token) = chase!(self.tokens, Token::Equal) {
+                                    return Err(Error(Spanned(
+                                        ErrorKind::UnexpectedToken,
+                                        token.span(),
+                                    )));
+                                }
+
+                                let expr = self.parse_expression_and_semicolon()?;
+                                Ok(self.new_stmt(Stmt::SymbolDecl(SymbolDecl {
+                                    identifier,
+                                    info: SymbolInfo::Fn(expr),
+                                })))
+                            }
+
+                            // This is just here to make the compiler shut up about missing match arms.
+                            _ => unreachable!(),
+                        },
+                        Missing(token) => {
+                            Err(Error(Spanned(ErrorKind::UnexpectedKind, token.span())))
                         }
-
-                        let expr = self.parse_expression_and_semicolon()?;
-                        Ok(self.new_stmt(Stmt::SymbolDecl(SymbolDecl {
-                            identifier: name,
-                            info: SymbolInfo::Fn(expr),
-                        })))
+                    },
+                    // Failed to find a colon, meaning this is just a normal expression beginning with
+                    // a symbol.
+                    // We can't backtrack on our chased tokens, so we do a little hack here for
+                    // overriding the next parsed expression with the consumed symbol.
+                    Missing(_) => {
+                        self.override_expr = Some(Spanned(Expr::Symbol(identifier), span));
+                        self.parse_statement_expression()
                     }
-                    Missing(token) => Err(Error(Spanned::new(ErrorKind::UnknownKind, token.span))),
-
-                    _ => unimplemented!("Implement other kinds"),
                 },
-                Missing(_) => {
-                    self.override_expr = Some(Spanned::new(Expr::Symbol(name), span));
-                    self.parse_statement_expression()
+                Token::Print => {
+                    let expr = self.parse_expression_and_semicolon()?;
+                    Ok(self.new_stmt(Stmt::Print(expr)))
                 }
+                // This is just here to make the compiler shut up about missing match arms.
+                _ => unreachable!(),
             },
-            SpannedCaught(Token::Print, _) => {
-                let expr = self.parse_expression_and_semicolon()?;
-                Ok(self.new_stmt(Stmt::Print(expr)))
-            }
-            SpannedMissing(_) => self.parse_statement_expression(),
-
-            // This is just here to make the compiler shut up about missing match arms.
-            _ => unreachable!(),
+            Missing(_) => self.parse_statement_expression(),
         }
     }
 
@@ -139,7 +141,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
     }
 
     fn parse_expression(&mut self) -> Result<Handle<Spanned<Expr<'lex>>>, Error> {
-        self.expr_span_begin();
+        self.expression_span_checkpoint();
         self.parse_precedence0()
     }
 
@@ -147,22 +149,24 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
         let expr = self.parse_expression()?;
 
         if let Missing(token) = chase!(self.tokens, Token::Semicolon) {
-            return Err(Error(Spanned::new(ErrorKind::MissingSemicolon, token.span)));
+            return Err(Error(Spanned(ErrorKind::MissingSemicolon, token.span())));
         }
 
         Ok(expr)
     }
 
     fn parse_precedence0(&mut self) -> Result<Handle<Spanned<Expr<'lex>>>, Error> {
+        self.expression_span_checkpoint();
         let mut expr = self.parse_precedence1()?;
 
-        while let Caught(token) = chase!(self.tokens, Token::Plus | Token::Minus) {
+        while let Caught(Spanned(token, _)) = chase!(self.tokens, Token::Plus | Token::Minus) {
             let op = match token {
                 Token::Plus => BinaryOp::Add,
                 Token::Minus => BinaryOp::Sub,
                 _ => unreachable!(),
             };
 
+            self.expression_span_checkpoint();
             let right = self.parse_precedence1()?;
             expr = self.add_expr(Expr::Binary {
                 left: expr,
@@ -175,15 +179,17 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
     }
 
     fn parse_precedence1(&mut self) -> Result<Handle<Spanned<Expr<'lex>>>, Error> {
+        self.expression_span_checkpoint();
         let mut expr = self.parse_precedence2()?;
 
-        while let Caught(token) = chase!(self.tokens, Token::Slash | Token::Star) {
+        while let Caught(Spanned(token, _)) = chase!(self.tokens, Token::Slash | Token::Star) {
             let op = match token {
                 Token::Slash => BinaryOp::Div,
                 Token::Star => BinaryOp::Mul,
                 _ => unreachable!(),
             };
 
+            self.expression_span_checkpoint();
             let right = self.parse_precedence2()?;
             expr = self.add_expr(Expr::Binary {
                 left: expr,
@@ -197,92 +203,93 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
 
     fn parse_precedence2(&mut self) -> Result<Handle<Spanned<Expr<'lex>>>, Error> {
         if let Some(override_expr) = self.override_expr.take() {
-            *self.exprs_span_stack.last_mut().unwrap() = override_expr.span;
-            return Ok(self.add_expr(override_expr.data));
+            *self.exprs_span_stack.last_mut().unwrap() = override_expr.span();
+            return Ok(self.add_expr(override_expr.0));
         }
 
-        match spanned_chase!(
+        match chase!(
             self.tokens,
             Token::Number(_) | Token::Symbol(_) | Token::LeftBrace | Token::LeftParenthesis
         ) {
-            SpannedCaught(Token::Number(number), span) => {
-                let number = number
-                    .parse()
-                    .map_err(|_| Error(Spanned::new(ErrorKind::InvalidNumericLiteral, span)))?;
-                Ok(self.add_expr(Expr::Literal(Literal::Number(number))))
-            }
-
-            SpannedCaught(Token::LeftBrace, _) => {
-                let mut exprs = Vec::new();
-                while let Missing(_) = chase!(self.tokens, Token::RightBrace) {
-                    let stmt = self.parse_statement()?;
-                    exprs.push(self.stmts.add(stmt));
+            Caught(Spanned(token, span)) => match token {
+                Token::Number(number) => {
+                    let number = number
+                        .parse()
+                        .map_err(|_| Error(Spanned(ErrorKind::InvalidNumericLiteral, span)))?;
+                    Ok(self.add_expr(Expr::Literal(Literal::Number(number))))
                 }
-                Ok(self.add_expr(Expr::Block(exprs)))
-            }
+                Token::LeftBrace => {
+                    let mut exprs = Vec::new();
+                    while let Missing(_) = chase!(self.tokens, Token::RightBrace) {
+                        match self.parse_statement() {
+                            Ok(stmt) => exprs.push(self.stmts.add(stmt)),
+                            Err(err) => {
+                                self.errors.push(err);
+                                self.synchronize();
+                            }
+                        }
+                    }
+                    Ok(self.add_expr(Expr::Block(exprs)))
+                }
+                Token::Symbol(name) => Ok(self.add_expr(Expr::Symbol(name))),
+                Token::LeftParenthesis => {
+                    let expr = self.parse_expression()?;
 
-            SpannedCaught(Token::Symbol(name), _) => Ok(self.add_expr(Expr::Symbol(name))),
+                    if let Missing(token) = chase!(self.tokens, Token::RightParenthesis) {
+                        return Err(Error(Spanned(
+                            ErrorKind::MissingRightParenthesis,
+                            token.span(),
+                        )));
+                    }
 
-            SpannedCaught(Token::LeftParenthesis, _) => {
-                let expr = self.parse_expression()?;
-
-                if let Missing(token) = chase!(self.tokens, Token::RightParenthesis) {
-                    return Err(Error(Spanned::new(
-                        ErrorKind::MissingRightParenthesis,
-                        token.span,
-                    )));
+                    Ok(expr)
                 }
 
-                Ok(expr)
-            }
-            SpannedMissing(token) => {
-                Err(Error(Spanned::new(ErrorKind::UnexpectedToken, token.span)))
-            }
-
-            // This is just here to make the compiler shut up about missing match arms.
-            _ => unreachable!(),
-        }
-    }
-
-    fn synchronize(&mut self) {
-        // Consume tokens until we hit a semicolon, indicating the end of a statement. (or EOF).
-        while let Some(token) = self.tokens.peek() {
-            match **token {
-                Token::Semicolon => {
-                    self.tokens.next();
-                    return;
-                }
-                Token::EndOfFile => return,
-                _ => {
-                    // Consume
-                    self.tokens.next();
-                }
-            }
+                // This is just here to make the compiler shut up about missing match arms.
+                _ => unreachable!(),
+            },
+            Missing(token) => Err(Error(Spanned(ErrorKind::UnexpectedToken, token.span()))),
         }
     }
 
     fn new_stmt(&mut self, stmt: Stmt<'lex>) -> Spanned<Stmt<'lex>> {
         let mut span = self.stmts_span_stack.pop().unwrap();
-        span.end = self.tokens.peek().unwrap().span.start;
-        Spanned::new(stmt, span)
+        span.end = self.tokens.peek().unwrap().span().start;
+        Spanned(stmt, span)
     }
 
     fn add_expr(&mut self, expr: Expr<'lex>) -> Handle<Spanned<Expr<'lex>>> {
         let mut span = self.exprs_span_stack.pop().unwrap();
-        span.end = self.tokens.peek().unwrap().span.start;
-        self.exprs.add(Spanned::new(expr, span))
+        span.end = self.tokens.peek().unwrap().span().start;
+        self.exprs.add(Spanned(expr, span))
     }
 
-    fn stmt_span_begin(&mut self) {
-        let start = self.tokens.peek().unwrap().span.start;
+    fn statement_span_checkpoint(&mut self) {
+        let start = self.tokens.peek().unwrap().span().start;
         // End will be filled later
         self.stmts_span_stack.push(Span { start, end: 0 });
     }
 
-    fn expr_span_begin(&mut self) {
-        let start = self.tokens.peek().unwrap().span.start;
+    fn expression_span_checkpoint(&mut self) {
+        let start = self.tokens.peek().unwrap().span().start;
         // End will be filled later
         self.exprs_span_stack.push(Span { start, end: 0 });
+    }
+
+    fn synchronize(&mut self) {
+        // Consume tokens until we hit a semicolon, indicating the end of a statement. (or EOF).
+        while let Some(Spanned(token, _)) = self.tokens.peek() {
+            match token {
+                Token::EndOfFile => return,
+                Token::Semicolon => {
+                    self.tokens.next();
+                    return;
+                }
+                _ => {
+                    self.tokens.next();
+                }
+            }
+        }
     }
 }
 
@@ -342,30 +349,28 @@ pub struct Error(Spanned<ErrorKind>);
 
 impl Error {
     pub fn render(&self, source_code: &str) -> String {
-        match self.0.data {
+        let Spanned(kind, span) = &self.0;
+        match kind {
             ErrorKind::InvalidNumericLiteral => {
+                format!("Invalid numeric literal {}", span.render(source_code))
+            }
+            ErrorKind::MissingRightParenthesis => {
                 format!(
-                    "Invalid numeric literal {}",
-                    self.0.span.render(source_code)
+                    "Expected closing parenthesis at the end of a grouped expression, got {}",
+                    span.render(source_code)
                 )
             }
             ErrorKind::MissingSemicolon => {
                 format!(
                     "Expected semicolon at the end of a statement, got {}",
-                    self.0.span.render(source_code)
+                    span.render(source_code)
                 )
             }
-            ErrorKind::MissingRightParenthesis => {
-                format!(
-                    "Expected closing parenthesis at the end of a grouped expression, got {}",
-                    self.0.span.render(source_code)
-                )
+            ErrorKind::UnexpectedKind => {
+                format!("Unexpected symbol kind {}", span.render(source_code))
             }
             ErrorKind::UnexpectedToken => {
-                format!("Unexpected token {}", self.0.span.render(source_code))
-            }
-            ErrorKind::UnknownKind => {
-                format!("Unexpected symbol kind {}", self.0.span.render(source_code))
+                format!("Unexpected token {}", span.render(source_code))
             }
         }
     }
@@ -374,22 +379,15 @@ impl Error {
 #[derive(Debug, Copy, Clone)]
 pub enum ErrorKind {
     InvalidNumericLiteral,
-    MissingSemicolon,
     MissingRightParenthesis,
+    MissingSemicolon,
+    UnexpectedKind,
     UnexpectedToken,
-    UnknownKind,
 }
 
 #[derive(Debug, Copy, Clone)]
 enum ChaseResult<'lex> {
-    Caught(Token<'lex>),
+    Caught(Spanned<Token<'lex>>),
     Missing(Spanned<Token<'lex>>),
 }
 use ChaseResult::*;
-
-#[derive(Debug, Copy, Clone)]
-enum SpannedChaseResult<'lex> {
-    SpannedCaught(Token<'lex>, Span),
-    SpannedMissing(Spanned<Token<'lex>>),
-}
-use SpannedChaseResult::*;

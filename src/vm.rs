@@ -243,23 +243,24 @@ impl<'syn> Generator<'syn> {
         self.program = vec![Call { addr: 0 }, Halt];
 
         for stmt in outer_stmts.handles() {
-            match &outer_stmts.get(stmt).data {
+            let Spanned(stmt_data, span) = outer_stmts.get(stmt);
+            match stmt_data {
                 Stmt::SymbolDecl(SymbolDecl {
                     identifier,
                     info: SymbolInfo::Fn(expr),
                 }) => {
-                    self.queue_function_generation(identifier, *expr)?;
+                    self.queue_function_generation(identifier, &stmts, stmt, *expr)?;
                 }
-
                 Stmt::SymbolDecl(SymbolDecl {
+                    // 'main' symbol in the outer scope that isn't a function.
                     identifier: "main",
                     info: _,
-                }) => return Err(Error::InvalidMainDeclaration),
+                }) => return Err(Error(Spanned(ErrorKind::InvalidMainDeclaration, *span))),
 
-                _ => unimplemented!(),
+                _ => return Err(Error(Spanned(ErrorKind::NotInsideFunction, *span))),
             }
 
-            if let Some(SymbolDecl {
+            while let Some(SymbolDecl {
                 identifier,
                 info: SymbolInfo::Fn(expr),
             }) = self.function_generation_queue.pop()
@@ -280,28 +281,29 @@ impl<'syn> Generator<'syn> {
         exprs: &Pool<Spanned<Expr<'syn>>>,
         stmt: Handle<Spanned<Stmt<'syn>>>,
     ) -> Result<(), Error<'syn>> {
-        match **stmts.get(stmt) {
+        let Spanned(stmt_data, span) = stmts.get(stmt);
+        match stmt_data {
             Stmt::Expr(expr) => {
-                self.generate_expression(stmts, exprs, expr)?;
+                self.generate_expression(stmts, exprs, *expr)?;
             }
             Stmt::SymbolDecl(SymbolDecl { identifier, info }) => match info {
                 SymbolInfo::Fn(expr) => {
-                    self.queue_function_generation(identifier, expr)?;
+                    self.queue_function_generation(identifier, stmts, stmt, *expr)?;
                 }
                 SymbolInfo::Var(VarInfo::Value(expr)) => {
                     let reg = self.allocate_reg();
 
-                    self.envs
-                        .declare_symbol(identifier, Symbol::Variable(reg))?;
-
                     self.override_next_allocated_register = Some(reg);
-                    self.generate_expression(stmts, exprs, expr)?;
-                }
+                    self.generate_expression(stmts, exprs, *expr)?;
 
+                    self.envs
+                        .declare_symbol(identifier, Symbol::Variable(reg))
+                        .map_err(|err| Error(Spanned(err, *span)))?;
+                }
                 _ => unimplemented!(),
             },
             Stmt::Print(expr) => {
-                let reg = self.generate_expression(stmts, exprs, expr)?;
+                let reg = self.generate_expression(stmts, exprs, *expr)?;
                 self.program.push(Print { reg });
             }
         }
@@ -314,7 +316,8 @@ impl<'syn> Generator<'syn> {
         exprs: &Pool<Spanned<Expr<'syn>>>,
         expr: Handle<Spanned<Expr<'syn>>>,
     ) -> Result<u8, Error<'syn>> {
-        match &exprs.get(expr).data {
+        let Spanned(expr_data, span) = exprs.get(expr);
+        match expr_data {
             Expr::Binary { left, op, right } => {
                 let dst = self.allocate_reg();
                 let left = self.generate_expression(stmts, exprs, *left)?;
@@ -335,9 +338,13 @@ impl<'syn> Generator<'syn> {
                     Ok(dst)
                 }
             },
-            Expr::Symbol(identifier) => match self.envs.find_symbol(identifier)? {
+            Expr::Symbol(identifier) => match self
+                .envs
+                .find_symbol(identifier)
+                .map_err(|err| Error(Spanned(err, *span)))?
+            {
                 Symbol::Variable(reg) => Ok(*reg),
-                _ => Err(Error::SymbolIsNotVariable(identifier)),
+                _ => Err(Error(Spanned(ErrorKind::SymbolIsNotVariable, *span))),
             },
             Expr::Block(block_stmts) => {
                 self.envs.push();
@@ -379,13 +386,17 @@ impl<'syn> Generator<'syn> {
     fn queue_function_generation(
         &mut self,
         identifier: &'syn str,
+        stmts: &Pool<Spanned<Stmt<'syn>>>,
+        stmt: Handle<Spanned<Stmt<'syn>>>,
         expr: Handle<Spanned<Expr<'syn>>>,
     ) -> Result<(), Error<'syn>> {
         // FIXME: Encode the fact that this function is not yet completed somehow,
         //        then generate `Call`s to it in a special way, maybe a `ToBePatchedCall` opcode or
         //        something, then iterate the active function frame when this function is
         //        eventually generated and patch those special opcodes with the correct address.
-        self.envs.declare_symbol(identifier, Symbol::Function(0))?;
+        self.envs
+            .declare_symbol(identifier, Symbol::Function(0))
+            .map_err(|err| Error(Spanned(err, stmts.get(stmt).span())))?;
 
         self.function_generation_queue.push(SymbolDecl {
             identifier,
@@ -467,10 +478,9 @@ impl<'syn> EnvManager<'syn> {
     #[inline(always)]
     fn pop(&mut self) {
         #[cfg(debug_assertions)]
-        dbg!(self
-            .envs
+        self.envs
             .pop()
-            .expect("There should aways be at least one env to pop (the global one)."));
+            .expect("There should aways be at least one env to pop (the global one).");
 
         #[cfg(not(debug_assertions))]
         unsafe {
@@ -490,7 +500,7 @@ impl<'syn> EnvManager<'syn> {
         }
     }
 
-    fn try_active_function_frame(&mut self) -> Result<&mut FunctionFrame, Error<'syn>> {
+    fn try_active_function_frame(&mut self) -> Result<&mut FunctionFrame, ErrorKind<'syn>> {
         for env in self.envs.iter_mut().rev() {
             if let Some(value) = env.function_frames.last_mut() {
                 // NOTE: This silly transmute can be removed once the borrow checker sees that the
@@ -501,10 +511,10 @@ impl<'syn> EnvManager<'syn> {
             }
         }
 
-        Err(Error::NotInsideFunction)
+        Err(ErrorKind::NotInsideFunction)
     }
 
-    fn find_symbol(&mut self, identifier: &'syn str) -> Result<&mut Symbol, Error<'syn>> {
+    fn find_symbol(&mut self, identifier: &'syn str) -> Result<&mut Symbol, ErrorKind<'syn>> {
         for env in self.envs.iter_mut().rev() {
             if let Some(value) = env.symbols.get_mut(identifier) {
                 // NOTE: This silly transmute can be removed once the borrow checker sees that the
@@ -513,10 +523,14 @@ impl<'syn> EnvManager<'syn> {
             }
         }
 
-        Err(Error::UndeclaredSymbol(identifier))
+        Err(ErrorKind::UndeclaredSymbol)
     }
 
-    fn declare_symbol(&mut self, identifier: &'syn str, symbol: Symbol) -> Result<(), Error<'syn>> {
+    fn declare_symbol(
+        &mut self,
+        identifier: &'syn str,
+        symbol: Symbol,
+    ) -> Result<(), ErrorKind<'syn>> {
         // Disallow declaring symbols with the same name as the current function, if we are inside
         // one.
         if let Ok(frame) = self.try_active_function_frame() {
@@ -524,7 +538,9 @@ impl<'syn> EnvManager<'syn> {
                 // NOTE: This silly transmute can be removed once the borrow checker sees that the
                 // lifetimes are fine.
                 return Err(unsafe {
-                    std::mem::transmute::<Error, Error>(Error::InvalidShadowing(identifier))
+                    std::mem::transmute::<ErrorKind, ErrorKind>(ErrorKind::InvalidShadowing(
+                        identifier,
+                    ))
                 });
             }
         }
@@ -534,7 +550,7 @@ impl<'syn> EnvManager<'syn> {
                 // Allow variables to shadow other variables.
                 (Symbol::Variable(reg), Symbol::Variable(new_reg)) => *reg = new_reg,
                 // Disallow any other type of shadowing.
-                _ => return Err(Error::InvalidShadowing(identifier)),
+                _ => return Err(ErrorKind::InvalidShadowing(identifier)),
             },
             Entry::Vacant(entry) => {
                 entry.insert(symbol);
@@ -554,11 +570,10 @@ impl<'syn> EnvManager<'syn> {
     #[inline(always)]
     fn pop_function_frame(&mut self) {
         #[cfg(debug_assertions)]
-        dbg!(self
-            .active()
+        self.active()
             .function_frames
             .pop()
-            .expect("A function frame should've just been pushed."));
+            .expect("A function frame should've just been pushed.");
 
         #[cfg(not(debug_assertions))]
         unsafe {
@@ -611,11 +626,53 @@ impl<'syn> FunctionFrame<'syn> {
     }
 }
 
-#[derive(Debug)]
-pub enum Error<'syn> {
-    NotInsideFunction,
+#[derive(Debug, Copy, Clone)]
+pub enum ErrorKind<'syn> {
     InvalidMainDeclaration,
-    UndeclaredSymbol(&'syn str),
     InvalidShadowing(&'syn str),
-    SymbolIsNotVariable(&'syn str),
+    NotInsideFunction,
+    UndeclaredSymbol,
+    SymbolIsNotVariable,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct Error<'syn>(Spanned<ErrorKind<'syn>>);
+
+impl<'syn> Error<'syn> {
+    pub fn render(&self, source_code: &str) -> String {
+        let Spanned(kind, span) = &self.0;
+        match kind {
+            ErrorKind::InvalidMainDeclaration => {
+                format!(
+                    "The 'main' symbol in the outer scope must be a function instead of a {}.",
+                    span.render(source_code)
+                )
+            }
+            ErrorKind::InvalidShadowing(identifier) => {
+                format!(
+                    "Shadowing of symbol '{}' with {} is not allowed at this scope.",
+                    identifier,
+                    span.render(source_code)
+                )
+            }
+            ErrorKind::NotInsideFunction => {
+                format!(
+                    "Operation {} is only valid inside of a function.",
+                    span.render(source_code)
+                )
+            }
+            ErrorKind::UndeclaredSymbol => {
+                format!(
+                    "Symbol {} is undeclared or not available at that scope.",
+                    span.render(source_code)
+                )
+            }
+            ErrorKind::SymbolIsNotVariable => {
+                format!(
+                    "Only variables are allowed in the place of {}.",
+                    span.render(source_code)
+                )
+            }
+        }
+    }
 }

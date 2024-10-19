@@ -4,5 +4,5 @@ other: fn = {
 
 main: fn = {
     x := 100;
-    print x;
+    print x + 100;
 };
