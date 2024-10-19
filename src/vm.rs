@@ -331,6 +331,36 @@ impl<'syn> Generator<'syn> {
                 self.program.push(op);
                 Ok(dst)
             }
+            Expr::Block(block_stmts) => {
+                self.envs.push();
+
+                // TODO: Populate this register.
+                let dst = self.allocate_reg();
+                for stmt in block_stmts {
+                    self.generate_statement(stmts, exprs, *stmt)?;
+                }
+
+                self.envs.pop();
+
+                Ok(dst)
+            }
+            Expr::Call(expr) => match &exprs.get(*expr).0 {
+                Expr::Symbol(identifier) => match self
+                    .envs
+                    .find_symbol(identifier)
+                    .map_err(|err| Error(Spanned(err, *span)))?
+                {
+                    Symbol::Function(addr) => {
+                        let addr = *addr;
+                        // TODO: Populate this register with the return value.
+                        let dst = self.allocate_reg();
+                        self.program.push(Call { addr });
+                        Ok(dst)
+                    }
+                    _ => unimplemented!(),
+                },
+                _ => unimplemented!(),
+            },
             Expr::Literal(literal) => match literal {
                 Literal::Number(number) => {
                     let dst = self.allocate_reg();
@@ -346,19 +376,6 @@ impl<'syn> Generator<'syn> {
                 Symbol::Variable(reg) => Ok(*reg),
                 _ => Err(Error(Spanned(ErrorKind::SymbolIsNotVariable, *span))),
             },
-            Expr::Block(block_stmts) => {
-                self.envs.push();
-
-                // TODO: Populate this register.
-                let dst = self.allocate_reg();
-                for stmt in block_stmts {
-                    self.generate_statement(stmts, exprs, *stmt)?;
-                }
-
-                self.envs.pop();
-
-                Ok(dst)
-            }
         }
     }
 
@@ -379,6 +396,10 @@ impl<'syn> Generator<'syn> {
         self.patch_prologue(prologue_addr);
 
         self.envs.pop_function_frame();
+
+        if let Ok(Symbol::Function(addr)) = self.envs.find_symbol(identifier) {
+            *addr = prologue_addr;
+        }
 
         Ok(prologue_addr as Word)
     }
@@ -420,6 +441,7 @@ impl<'syn> Generator<'syn> {
 
     #[inline(always)]
     fn patch_prologue(&mut self, prologue_addr: Word) {
+        // Update the previously added `Reserve` op with the number of allocated registers
         #[cfg(debug_assertions)]
         {
             self.program[prologue_addr as usize] = Reserve {
@@ -428,7 +450,6 @@ impl<'syn> Generator<'syn> {
         }
         #[cfg(not(debug_assertions))]
         {
-            // Update the previously added `Reserve` op with the number of allocated registers
             *unsafe { self.program.get_unchecked_mut(prologue_addr as usize) } = Reserve {
                 num_regs: self.envs.active_function_frame().num_registers,
             };
