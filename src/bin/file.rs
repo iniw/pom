@@ -46,7 +46,7 @@ fn main() {
         if !stmts.is_empty() {
             eprintln!("Outer statements:");
             for s in &outer_stmts {
-                eprintln!("  - {:?}", s)
+                eprintln!("  - {}", s.render(&src))
             }
             eprintln!();
         }
@@ -55,7 +55,7 @@ fn main() {
         if !stmts.is_empty() {
             eprintln!("Statements:");
             for s in &stmts {
-                eprintln!("  - {:?}", s)
+                eprintln!("  - {}", s.render(&src))
             }
             eprintln!();
         }
@@ -64,7 +64,7 @@ fn main() {
         if !exprs.is_empty() {
             eprintln!("Expressions:");
             for e in &exprs {
-                eprintln!("  - {:?}", e)
+                eprintln!("  - {}", e.render(&src))
             }
             eprintln!();
         }
