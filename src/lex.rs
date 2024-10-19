@@ -23,10 +23,7 @@ impl<'src> Lexer<'src> {
             self.current_lexeme_start = offset;
             match self.interpret_character(character) {
                 Ok(Some(token)) => {
-                    tokens.push(Spanned::<Token> {
-                        data: token,
-                        span: self.current_lexeme_span(),
-                    });
+                    tokens.push(Spanned(token, self.current_lexeme_span()));
                 }
                 Ok(None) => {}
                 Err(e) => {
@@ -35,10 +32,7 @@ impl<'src> Lexer<'src> {
             }
         }
 
-        tokens.push(Spanned::<Token> {
-            data: Token::EndOfFile,
-            span: Span::eof_for(self.source_code),
-        });
+        tokens.push(Spanned(Token::EndOfFile, Span::eof_for(self.source_code)));
 
         (tokens, errors)
     }
@@ -79,10 +73,10 @@ impl<'src> Lexer<'src> {
                 self.extend_current_lexeme_while(char::is_ascii_digit);
                 if self.next_if_eq('.') {
                     if !self.next_if(char::is_ascii_digit) {
-                        return Err(Error {
-                            kind: ErrorKind::UnterminatedNumericLiteral,
-                            span: self.current_lexeme_span(),
-                        });
+                        return Err(Error(Spanned(
+                            ErrorKind::UnterminatedNumericLiteral,
+                            self.current_lexeme_span(),
+                        )));
                     }
                     self.extend_current_lexeme_while(char::is_ascii_digit);
                 }
@@ -108,10 +102,10 @@ impl<'src> Lexer<'src> {
             // Whitespace
             ' ' | '\t' | '\n' | '\r' | '\x0C' => Ok(None),
 
-            _ => Err(Error {
-                kind: ErrorKind::UnknownToken,
-                span: self.current_lexeme_span(),
-            }),
+            _ => Err(Error(Spanned(
+                ErrorKind::UnknownToken,
+                self.current_lexeme_span(),
+            ))),
         }
     }
 
@@ -240,21 +234,22 @@ impl Span {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct Spanned<T> {
-    pub data: T,
-    pub span: Span,
-}
+pub struct Spanned<T>(pub T, pub Span);
 
 impl<T> Spanned<T> {
-    pub fn new(data: T, span: Span) -> Self {
-        Self { data, span }
-    }
-
     pub fn render(&self, source_code: &str) -> String
     where
         T: std::fmt::Debug,
     {
-        format!("{:?} -> {}", self.data, self.span.render(source_code))
+        format!("{:?} -> {}", self.0, self.1.render(source_code))
+    }
+
+    pub fn data(&self) -> &T {
+        &self.0
+    }
+
+    pub fn span(&self) -> Span {
+        self.1
     }
 }
 
@@ -262,21 +257,18 @@ impl<T> std::ops::Deref for Spanned<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.data
+        &self.0
     }
 }
 
 impl<T> std::ops::DerefMut for Spanned<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.data
+        &mut self.0
     }
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct Error {
-    kind: ErrorKind,
-    span: Span,
-}
+pub struct Error(Spanned<ErrorKind>);
 
 #[derive(Debug, Copy, Clone)]
 pub enum ErrorKind {
@@ -286,15 +278,13 @@ pub enum ErrorKind {
 
 impl Error {
     pub fn render(&self, source_code: &str) -> String {
-        match self.kind {
+        let Spanned(kind, span) = &self.0;
+        match kind {
             ErrorKind::UnknownToken => {
-                format!("Unknown token {}", self.span.render(source_code))
+                format!("Unknown token {}", span.render(source_code))
             }
             ErrorKind::UnterminatedNumericLiteral => {
-                format!(
-                    "Unterminated numeric literal {}",
-                    self.span.render(source_code)
-                )
+                format!("Unterminated numeric literal {}", span.render(source_code))
             }
         }
     }

@@ -85,7 +85,7 @@ fn main() {
                     #[cfg(debug_assertions)]
                     dbg!(&program);
                 }
-                Err(err) => eprintln!("Error generating code: {:?}", err),
+                Err(err) => eprintln!("{}", err.render(&src)),
             }
         }
         println!("Total execution took: {:?}", start.elapsed());
