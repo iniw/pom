@@ -3,6 +3,7 @@ other: fn = {
 };
 
 main: fn = {
+    other();
     x := 100;
     print x + 100;
 };

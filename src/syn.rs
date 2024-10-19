@@ -65,13 +65,8 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
     fn parse_program(&mut self) {
         while let Missing(_) = chase!(self.tokens, Token::EndOfFile) {
             match self.parse_statement() {
-                Ok(stmt) => {
-                    self.outer_stmts.add(stmt);
-                }
-                Err(err) => {
-                    self.errors.push(err);
-                    self.synchronize();
-                }
+                Ok(stmt) => _ = self.outer_stmts.add(stmt),
+                Err(err) => self.handle_error(err),
             }
         }
     }
@@ -151,7 +146,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
         let expr = self.parse_expression()?;
 
         if let Missing(token) = chase!(self.tokens, Token::Semicolon) {
-            return Err(Error(Spanned(ErrorKind::MissingSemicolon, token.span())));
+            return Err(Error(Spanned(ErrorKind::ExpectedSemicolon, token.span())));
         }
 
         Ok(expr)
@@ -212,6 +207,23 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
     }
 
     fn parse_precedence2(&mut self) -> Result<Handle<Spanned<Expr<'lex>>>, Error> {
+        let expr_start = self.span_start();
+        let mut expr = self.parse_precedence3()?;
+
+        while let Caught(Spanned(_, span)) = chase!(self.tokens, Token::LeftParenthesis) {
+            if let Missing(token) = chase!(self.tokens, Token::RightParenthesis) {
+                return Err(Error(Spanned(
+                    ErrorKind::UnclosedFunctionParenthesis(span),
+                    token.span(),
+                )));
+            }
+            expr = self.add_expr(Expr::Call(expr), expr_start);
+        }
+
+        Ok(expr)
+    }
+
+    fn parse_precedence3(&mut self) -> Result<Handle<Spanned<Expr<'lex>>>, Error> {
         if let Some(Spanned(expr, span)) = self.override_expr.take() {
             return Ok(self.add_spanned_expr(expr, span));
         }
@@ -219,9 +231,10 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
         let expr_start = self.span_start();
         match chase!(
             self.tokens,
-            Token::Number(_) | Token::Symbol(_) | Token::LeftBrace | Token::LeftParenthesis
+            Token::Symbol(_) | Token::Number(_) | Token::LeftBrace | Token::LeftParenthesis
         ) {
             Caught(Spanned(token, span)) => match token {
+                Token::Symbol(name) => Ok(self.add_expr(Expr::Symbol(name), expr_start)),
                 Token::Number(number) => {
                     let number = number
                         .parse()
@@ -229,25 +242,25 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
                     Ok(self.add_expr(Expr::Literal(Literal::Number(number)), expr_start))
                 }
                 Token::LeftBrace => {
-                    let mut exprs = Vec::new();
-                    while let Missing(_) = chase!(self.tokens, Token::RightBrace) {
+                    let mut stmts = Vec::new();
+                    while let Missing(token) = chase!(self.tokens, Token::RightBrace) {
+                        if let Token::EndOfFile = *token {
+                            return Err(Error(Spanned(ErrorKind::UnclosedBraces, span)));
+                        }
+
                         match self.parse_statement() {
-                            Ok(stmt) => exprs.push(self.stmts.add(stmt)),
-                            Err(err) => {
-                                self.errors.push(err);
-                                self.synchronize();
-                            }
+                            Ok(stmt) => stmts.push(self.stmts.add(stmt)),
+                            Err(err) => self.handle_error(err),
                         }
                     }
-                    Ok(self.add_expr(Expr::Block(exprs), expr_start))
+                    Ok(self.add_expr(Expr::Block(stmts), expr_start))
                 }
-                Token::Symbol(name) => Ok(self.add_expr(Expr::Symbol(name), expr_start)),
                 Token::LeftParenthesis => {
                     let expr = self.parse_expression()?;
 
                     if let Missing(token) = chase!(self.tokens, Token::RightParenthesis) {
                         return Err(Error(Spanned(
-                            ErrorKind::MissingRightParenthesis,
+                            ErrorKind::UnclosedExpressionParenthesis(span),
                             token.span(),
                         )));
                     }
@@ -258,7 +271,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
                 // This is just here to make the compiler shut up about missing match arms.
                 _ => unreachable!(),
             },
-            Missing(token) => Err(Error(Spanned(ErrorKind::UnexpectedToken, token.span()))),
+            Missing(token) => Err(Error(Spanned(ErrorKind::ExpectedExpression, token.span()))),
         }
     }
 
@@ -289,7 +302,12 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
         self.tokens.peek().unwrap().span().start
     }
 
-    fn synchronize(&mut self) {
+    fn handle_error(&mut self, error: Error) {
+        self.errors.push(error);
+        self.sync();
+    }
+
+    fn sync(&mut self) {
         // Consume tokens until we hit a semicolon, indicating the end of a statement. (or EOF).
         while let Some(Spanned(token, _)) = self.tokens.peek() {
             match token {
@@ -327,6 +345,7 @@ pub enum Expr<'lex> {
         right: Handle<Spanned<Expr<'lex>>>,
     },
     Block(Vec<Handle<Spanned<Stmt<'lex>>>>),
+    Call(Handle<Spanned<Expr<'lex>>>),
     Literal(Literal),
     Symbol(&'lex str),
 }
@@ -365,25 +384,48 @@ impl Error {
         let Spanned(kind, span) = &self.0;
         match kind {
             ErrorKind::InvalidNumericLiteral => {
-                format!("Invalid numeric literal {}", span.render(source_code))
+                format!("Invalid numeric literal {}.", span.render(source_code))
             }
-            ErrorKind::MissingRightParenthesis => {
+            ErrorKind::ExpectedExpression => {
                 format!(
-                    "Expected closing parenthesis at the end of a grouped expression, got {}",
+                    "Expected expression instead of {}.",
                     span.render(source_code)
                 )
             }
-            ErrorKind::MissingSemicolon => {
+            ErrorKind::ExpectedSemicolon => {
                 format!(
-                    "Expected semicolon at the end of a statement, got {}",
+                    "Expected semicolon to finalize statement, got {} instead.",
+                    span.render(source_code)
+                )
+            }
+            ErrorKind::UnclosedBraces => {
+                format!(
+                    "Unclosed braces beginning @ {}:{}",
+                    span.line(source_code),
+                    span.column(source_code),
+                )
+            }
+            ErrorKind::UnclosedFunctionParenthesis(opening) => {
+                format!(
+                    "Unclosed parenthesis for function call beginning @ {}:{}, got {} instead.",
+                    opening.line(source_code),
+                    opening.column(source_code),
+                    span.render(source_code)
+                )
+            }
+            ErrorKind::UnclosedExpressionParenthesis(opening) => {
+                format!(
+                    "Unclosed parenthesis for parenthesized expression beginning @ {}:{}, got {} instead.",
+                    opening.line(source_code),
+                    opening.column(source_code),
                     span.render(source_code)
                 )
             }
             ErrorKind::UnexpectedKind => {
-                format!("Unexpected symbol kind {}", span.render(source_code))
+                format!("Unexpected symbol kind {}.", span.render(source_code))
             }
             ErrorKind::UnexpectedToken => {
-                format!("Unexpected token {}", span.render(source_code))
+                format!("Unexpected token {}.", span.render(source_code))
             }
         }
     }
@@ -392,8 +434,14 @@ impl Error {
 #[derive(Debug, Copy, Clone)]
 pub enum ErrorKind {
     InvalidNumericLiteral,
-    MissingRightParenthesis,
-    MissingSemicolon,
+
+    ExpectedExpression,
+    ExpectedSemicolon,
+
+    UnclosedBraces,
+    UnclosedFunctionParenthesis(Span),
+    UnclosedExpressionParenthesis(Span),
+
     UnexpectedKind,
     UnexpectedToken,
 }

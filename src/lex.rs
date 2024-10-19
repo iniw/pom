@@ -203,11 +203,11 @@ impl Span {
         }
     }
 
-    fn line(&self, source_code: &str) -> usize {
+    pub fn line(&self, source_code: &str) -> usize {
         source_code[..=self.start as usize].lines().count()
     }
 
-    fn column(&self, source_code: &str) -> u32 {
+    pub fn column(&self, source_code: &str) -> u32 {
         if let Some(line) = source_code[..self.start as usize].rfind("\n") {
             self.start - (line as u32)
         } else {
