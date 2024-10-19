@@ -197,8 +197,8 @@ pub enum Token<'src> {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Span {
-    start: u32,
-    end: u32,
+    pub start: u32,
+    pub end: u32,
 }
 
 impl Span {
@@ -231,7 +231,7 @@ impl Span {
         } else {
             format!(
                 "'{}' @ {}:{}",
-                self.lexeme(source_code),
+                self.lexeme(source_code).trim(),
                 self.line(source_code),
                 self.column(source_code)
             )
@@ -246,11 +246,29 @@ pub struct Spanned<T> {
 }
 
 impl<T> Spanned<T> {
+    pub fn new(data: T, span: Span) -> Self {
+        Self { data, span }
+    }
+
     pub fn render(&self, source_code: &str) -> String
     where
         T: std::fmt::Debug,
     {
         format!("{:?} -> {}", self.data, self.span.render(source_code))
+    }
+}
+
+impl<T> std::ops::Deref for Spanned<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+impl<T> std::ops::DerefMut for Spanned<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.data
     }
 }
 

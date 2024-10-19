@@ -4,6 +4,7 @@ use std::{
 };
 
 use crate::{
+    lex::Spanned,
     pool::{Handle, Pool},
     syn::{BinaryOp, Expr, Literal, Stmt, SymbolDecl, SymbolInfo, VarInfo},
 };
@@ -233,16 +234,16 @@ impl<'syn> Generator<'syn> {
 
     pub fn generate(
         mut self,
-        outer_stmts: Pool<Stmt<'syn>>,
-        stmts: Pool<Stmt<'syn>>,
-        exprs: Pool<Expr<'syn>>,
+        outer_stmts: Pool<Spanned<Stmt<'syn>>>,
+        stmts: Pool<Spanned<Stmt<'syn>>>,
+        exprs: Pool<Spanned<Expr<'syn>>>,
     ) -> Result<Vec<Op>, Error<'syn>> {
         // The address here is the entry point, which will be patched up later when we find the
         // `main` symbol.
         self.program = vec![Call { addr: 0 }, Halt];
 
         for stmt in outer_stmts.handles() {
-            match outer_stmts.get(stmt) {
+            match &outer_stmts.get(stmt).data {
                 Stmt::SymbolDecl(SymbolDecl {
                     identifier,
                     info: SymbolInfo::Fn(expr),
@@ -275,17 +276,17 @@ impl<'syn> Generator<'syn> {
 
     fn generate_statement(
         &mut self,
-        stmts: &Pool<Stmt<'syn>>,
-        exprs: &Pool<Expr<'syn>>,
-        stmt: Handle<Stmt<'syn>>,
+        stmts: &Pool<Spanned<Stmt<'syn>>>,
+        exprs: &Pool<Spanned<Expr<'syn>>>,
+        stmt: Handle<Spanned<Stmt<'syn>>>,
     ) -> Result<(), Error<'syn>> {
-        match stmts.get(stmt) {
+        match **stmts.get(stmt) {
             Stmt::Expr(expr) => {
-                self.generate_expression(stmts, exprs, *expr)?;
+                self.generate_expression(stmts, exprs, expr)?;
             }
             Stmt::SymbolDecl(SymbolDecl { identifier, info }) => match info {
                 SymbolInfo::Fn(expr) => {
-                    self.queue_function_generation(identifier, *expr)?;
+                    self.queue_function_generation(identifier, expr)?;
                 }
                 SymbolInfo::Var(VarInfo::Value(expr)) => {
                     let reg = self.allocate_reg();
@@ -294,13 +295,13 @@ impl<'syn> Generator<'syn> {
                         .declare_symbol(identifier, Symbol::Variable(reg))?;
 
                     self.override_next_allocated_register = Some(reg);
-                    self.generate_expression(stmts, exprs, *expr)?;
+                    self.generate_expression(stmts, exprs, expr)?;
                 }
 
                 _ => unimplemented!(),
             },
             Stmt::Print(expr) => {
-                let reg = self.generate_expression(stmts, exprs, *expr)?;
+                let reg = self.generate_expression(stmts, exprs, expr)?;
                 self.program.push(Print { reg });
             }
         }
@@ -309,11 +310,11 @@ impl<'syn> Generator<'syn> {
 
     fn generate_expression(
         &mut self,
-        stmts: &Pool<Stmt<'syn>>,
-        exprs: &Pool<Expr<'syn>>,
-        expr: Handle<Expr<'syn>>,
+        stmts: &Pool<Spanned<Stmt<'syn>>>,
+        exprs: &Pool<Spanned<Expr<'syn>>>,
+        expr: Handle<Spanned<Expr<'syn>>>,
     ) -> Result<u8, Error<'syn>> {
-        match exprs.get(expr) {
+        match &exprs.get(expr).data {
             Expr::Binary { left, op, right } => {
                 let dst = self.allocate_reg();
                 let left = self.generate_expression(stmts, exprs, *left)?;
@@ -356,10 +357,10 @@ impl<'syn> Generator<'syn> {
 
     fn generate_function(
         &mut self,
-        stmts: &Pool<Stmt<'syn>>,
-        exprs: &Pool<Expr<'syn>>,
+        stmts: &Pool<Spanned<Stmt<'syn>>>,
+        exprs: &Pool<Spanned<Expr<'syn>>>,
         identifier: &'syn str,
-        expr: Handle<Expr<'syn>>,
+        expr: Handle<Spanned<Expr<'syn>>>,
     ) -> Result<Word, Error<'syn>> {
         let prologue_addr = self.generate_prologue();
 
@@ -378,7 +379,7 @@ impl<'syn> Generator<'syn> {
     fn queue_function_generation(
         &mut self,
         identifier: &'syn str,
-        expr: Handle<Expr<'syn>>,
+        expr: Handle<Spanned<Expr<'syn>>>,
     ) -> Result<(), Error<'syn>> {
         // FIXME: Encode the fact that this function is not yet completed somehow,
         //        then generate `Call`s to it in a special way, maybe a `ToBePatchedCall` opcode or
