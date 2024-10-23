@@ -42,7 +42,7 @@ impl<'gen> Processor<'gen> {
                     self.bp = self.regs.len() as Word;
 
                     self.regs
-                        .resize_with(self.regs.len() + num_regs as usize, Default::default);
+                        .resize(self.regs.len() + num_regs as usize, Reg(0));
                 }
                 Op::Ret => {
                     self.regs.truncate(self.bp as usize);
@@ -442,18 +442,9 @@ impl<'syn> Generator<'syn> {
     #[inline(always)]
     fn patch_prologue(&mut self, prologue_addr: Word) {
         // Update the previously added `Reserve` op with the number of allocated registers
-        #[cfg(debug_assertions)]
-        {
-            self.program[prologue_addr as usize] = Reserve {
-                num_regs: self.envs.active_function_frame().num_registers,
-            };
-        }
-        #[cfg(not(debug_assertions))]
-        {
-            *unsafe { self.program.get_unchecked_mut(prologue_addr as usize) } = Reserve {
-                num_regs: self.envs.active_function_frame().num_registers,
-            };
-        }
+        self.program[prologue_addr as usize] = Reserve {
+            num_regs: self.envs.active_function_frame().num_registers,
+        };
     }
 
     #[inline(always)]
@@ -498,27 +489,13 @@ impl<'syn> EnvManager<'syn> {
 
     #[inline(always)]
     fn pop(&mut self) {
-        #[cfg(debug_assertions)]
         self.envs
             .pop()
             .expect("There should aways be at least one env to pop (the global one).");
-
-        #[cfg(not(debug_assertions))]
-        unsafe {
-            self.envs.pop().unwrap_unchecked()
-        };
     }
 
     fn active_function_frame(&mut self) -> &mut FunctionFrame {
-        #[cfg(debug_assertions)]
-        {
-            self.try_active_function_frame().unwrap()
-        }
-
-        #[cfg(not(debug_assertions))]
-        {
-            unsafe { self.try_active_function_frame().unwrap_unchecked() }
-        }
+        self.try_active_function_frame().unwrap()
     }
 
     fn try_active_function_frame(&mut self) -> Result<&mut FunctionFrame, ErrorKind<'syn>> {
@@ -590,30 +567,17 @@ impl<'syn> EnvManager<'syn> {
 
     #[inline(always)]
     fn pop_function_frame(&mut self) {
-        #[cfg(debug_assertions)]
         self.active()
             .function_frames
             .pop()
             .expect("A function frame should've just been pushed.");
-
-        #[cfg(not(debug_assertions))]
-        unsafe {
-            self.active().function_frames.pop().unwrap_unchecked()
-        };
     }
 
     #[inline(always)]
     fn active(&mut self) -> &mut Env<'syn> {
-        #[cfg(debug_assertions)]
-        {
-            self.envs
-                .last_mut()
-                .expect("There should always be at least one env.")
-        }
-        #[cfg(not(debug_assertions))]
-        {
-            unsafe { self.envs.last_mut().unwrap_unchecked() }
-        }
+        self.envs
+            .last_mut()
+            .expect("There should always be at least one env.")
     }
 }
 
