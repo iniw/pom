@@ -97,11 +97,12 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
                                     )));
                                 }
 
-                                let expr = self.parse_expression_and_semicolon()?;
+                                let body = self.parse_statement()?;
+                                let stmt = self.stmts.add(body);
                                 Ok(self.new_stmt(
                                     Stmt::SymbolDecl(SymbolDecl {
                                         identifier,
-                                        info: SymbolInfo::Fn(expr),
+                                        info: SymbolInfo::Fn(stmt),
                                     }),
                                     stmt_start,
                                 ))
@@ -373,7 +374,7 @@ pub enum VarInfo<'lex> {
 #[derive(Debug, Copy, Clone)]
 pub enum SymbolInfo<'lex> {
     Var(VarInfo<'lex>),
-    Fn(Handle<Spanned<Expr<'lex>>>),
+    Fn(Handle<Spanned<Stmt<'lex>>>),
 }
 
 #[derive(Debug, Copy, Clone)]
