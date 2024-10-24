@@ -247,9 +247,9 @@ impl<'syn> Generator<'syn> {
             match stmt_data {
                 Stmt::SymbolDecl(SymbolDecl {
                     identifier,
-                    info: SymbolInfo::Fn(expr),
+                    info: SymbolInfo::Fn(body),
                 }) => {
-                    self.queue_function_generation(identifier, &stmts, stmt, *expr)?;
+                    self.queue_function_generation(&stmts, identifier, stmt, *body)?;
                 }
                 Stmt::SymbolDecl(SymbolDecl {
                     // 'main' symbol in the outer scope that isn't a function.
@@ -262,10 +262,10 @@ impl<'syn> Generator<'syn> {
 
             while let Some(SymbolDecl {
                 identifier,
-                info: SymbolInfo::Fn(expr),
+                info: SymbolInfo::Fn(body),
             }) = self.function_generation_queue.pop()
             {
-                let addr = self.generate_function(&stmts, &exprs, identifier, expr)?;
+                let addr = self.generate_function(&stmts, &exprs, identifier, body)?;
                 if identifier == "main" {
                     self.program[0] = Call { addr };
                 }
@@ -287,8 +287,8 @@ impl<'syn> Generator<'syn> {
                 self.generate_expression(stmts, exprs, *expr)?;
             }
             Stmt::SymbolDecl(SymbolDecl { identifier, info }) => match info {
-                SymbolInfo::Fn(expr) => {
-                    self.queue_function_generation(identifier, stmts, stmt, *expr)?;
+                SymbolInfo::Fn(body) => {
+                    self.queue_function_generation(stmts, identifier, stmt, *body)?;
                 }
                 SymbolInfo::Var(VarInfo::Value(expr)) => {
                     let reg = self.allocate_reg();
@@ -384,13 +384,13 @@ impl<'syn> Generator<'syn> {
         stmts: &Pool<Spanned<Stmt<'syn>>>,
         exprs: &Pool<Spanned<Expr<'syn>>>,
         identifier: &'syn str,
-        expr: Handle<Spanned<Expr<'syn>>>,
+        body: Handle<Spanned<Stmt<'syn>>>,
     ) -> Result<Word, Error<'syn>> {
         let prologue_addr = self.generate_prologue();
 
         self.envs.push_function_frame(identifier);
 
-        self.generate_expression(stmts, exprs, expr)?;
+        self.generate_statement(stmts, exprs, body)?;
 
         self.generate_epilogue();
         self.patch_prologue(prologue_addr);
@@ -406,10 +406,10 @@ impl<'syn> Generator<'syn> {
 
     fn queue_function_generation(
         &mut self,
-        identifier: &'syn str,
         stmts: &Pool<Spanned<Stmt<'syn>>>,
-        stmt: Handle<Spanned<Stmt<'syn>>>,
-        expr: Handle<Spanned<Expr<'syn>>>,
+        identifier: &'syn str,
+        decl: Handle<Spanned<Stmt<'syn>>>,
+        body: Handle<Spanned<Stmt<'syn>>>,
     ) -> Result<(), Error<'syn>> {
         // FIXME: Encode the fact that this function is not yet completed somehow,
         //        then generate `Call`s to it in a special way, maybe a `ToBePatchedCall` opcode or
@@ -417,11 +417,11 @@ impl<'syn> Generator<'syn> {
         //        eventually generated and patch those special opcodes with the correct address.
         self.envs
             .declare_symbol(identifier, Symbol::Function(0))
-            .map_err(|err| Error(Spanned(err, stmts.get(stmt).span())))?;
+            .map_err(|err| Error(Spanned(err, stmts.get(decl).span())))?;
 
         self.function_generation_queue.push(SymbolDecl {
             identifier,
-            info: SymbolInfo::Fn(expr),
+            info: SymbolInfo::Fn(body),
         });
 
         Ok(())
