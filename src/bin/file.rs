@@ -13,9 +13,7 @@ fn main() {
     for arg in args {
         let filename = PathBuf::from(arg).with_extension("pom");
 
-        let src = if let Ok(src) = fs::read_to_string(&filename) {
-            src
-        } else {
+        let Ok(src) = fs::read_to_string(&filename) else {
             eprintln!("Failed to read file \"{}\".", filename.to_string_lossy());
             continue;
         };
