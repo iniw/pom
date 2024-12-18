@@ -1,5 +1,11 @@
 use std::{iter::Peekable, str::CharIndices};
 
+pub mod error;
+pub mod span;
+
+use error::{Error, ErrorKind};
+use span::{Span, Spanned};
+
 pub struct Lexer<'src> {
     source_code: &'src str,
     source: Peekable<CharIndices<'src>>,
@@ -187,105 +193,4 @@ pub enum Token<'src> {
     PipePipe,
 
     EndOfFile,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct Span {
-    pub start: u32,
-    pub end: u32,
-}
-
-impl Span {
-    fn eof_for(source_code: &str) -> Self {
-        Self {
-            start: source_code.len() as u32,
-            end: source_code.len() as u32,
-        }
-    }
-
-    pub fn line(&self, source_code: &str) -> usize {
-        source_code[..=self.start as usize].lines().count()
-    }
-
-    pub fn column(&self, source_code: &str) -> u32 {
-        if let Some(line) = source_code[..self.start as usize].rfind("\n") {
-            self.start - (line as u32)
-        } else {
-            self.start + 1
-        }
-    }
-
-    fn lexeme<'src>(&self, source_code: &'src str) -> &'src str {
-        &source_code[self.start as usize..self.end as usize]
-    }
-
-    pub fn render(&self, source_code: &str) -> String {
-        if *self == Self::eof_for(source_code) {
-            "<EOF>".to_owned()
-        } else {
-            format!(
-                "'{}' @ {}:{}",
-                self.lexeme(source_code).trim(),
-                self.line(source_code),
-                self.column(source_code)
-            )
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct Spanned<T>(pub T, pub Span);
-
-impl<T> Spanned<T> {
-    pub fn render(&self, source_code: &str) -> String
-    where
-        T: std::fmt::Debug,
-    {
-        format!("{:?} -> {}", self.0, self.1.render(source_code))
-    }
-
-    pub fn data(&self) -> &T {
-        &self.0
-    }
-
-    pub fn span(&self) -> Span {
-        self.1
-    }
-}
-
-impl<T> std::ops::Deref for Spanned<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<T> std::ops::DerefMut for Spanned<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct Error(Spanned<ErrorKind>);
-
-#[derive(Debug, Copy, Clone)]
-pub enum ErrorKind {
-    UnknownToken,
-    UnterminatedNumericLiteral,
-}
-
-impl Error {
-    pub fn render(&self, source_code: &str) -> String {
-        let Spanned(kind, span) = &self.0;
-        match kind {
-            ErrorKind::UnknownToken => {
-                format!("Unknown token {}", span.render(source_code))
-            }
-            ErrorKind::UnterminatedNumericLiteral => {
-                format!("Unterminated numeric literal {}", span.render(source_code))
-            }
-        }
-    }
 }
