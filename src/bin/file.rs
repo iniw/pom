@@ -83,10 +83,10 @@ fn main() {
             }
             eprintln!();
         } else {
-            let gen = vm::Generator::new();
+            let gen = vm::gen::Generator::new();
             match gen.generate(outer_stmts, stmts, exprs) {
                 Ok(program) => {
-                    let cpu = vm::Processor::new(&program);
+                    let cpu = vm::cpu::Processor::new(&program);
                     cpu.run();
 
                     #[cfg(debug_assertions)]

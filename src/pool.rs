@@ -89,6 +89,16 @@ pub struct Handle<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
+impl<T> Handle<T> {
+    #[inline(always)]
+    fn new(idx: u32) -> Self {
+        Self {
+            idx,
+            _phantom: std::marker::PhantomData {},
+        }
+    }
+}
+
 impl<T> Clone for Handle<T> {
     #[inline(always)]
     fn clone(&self) -> Self {
@@ -97,16 +107,6 @@ impl<T> Clone for Handle<T> {
 }
 
 impl<T> Copy for Handle<T> {}
-
-impl<T> Handle<T> {
-    #[inline]
-    fn new(idx: u32) -> Self {
-        Self {
-            idx,
-            _phantom: std::marker::PhantomData {},
-        }
-    }
-}
 
 impl<T> std::fmt::Debug for Handle<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
