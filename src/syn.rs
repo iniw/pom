@@ -61,7 +61,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
     fn parse_program(&mut self) {
         while let Missing(_) = chase!(self.tokens, Token::EndOfFile) {
             match self.parse_statement() {
-                Ok(stmt) => _ = self.outer_stmts.add(stmt),
+                Ok(stmt) => _ = self.outer_stmts.push(stmt),
                 Err(err) => self.handle_error(err),
             }
         }
@@ -94,7 +94,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
                                 }
 
                                 let body = self.parse_statement()?;
-                                let stmt = self.stmts.add(body);
+                                let stmt = self.stmts.push(body);
                                 Ok(self.new_stmt(
                                     Stmt::SymbolDecl(SymbolDecl {
                                         identifier,
@@ -246,7 +246,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
                         }
 
                         match self.parse_statement() {
-                            Ok(stmt) => stmts.push(self.stmts.add(stmt)),
+                            Ok(stmt) => stmts.push(self.stmts.push(stmt)),
                             Err(err) => self.handle_error(err),
                         }
                     }
@@ -292,7 +292,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
     }
 
     fn add_spanned_expr(&mut self, expr: Expr<'lex>, span: Span) -> Handle<Spanned<Expr<'lex>>> {
-        self.exprs.add(Spanned(expr, span))
+        self.exprs.push(Spanned(expr, span))
     }
 
     fn span_start(&mut self) -> u32 {

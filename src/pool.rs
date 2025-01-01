@@ -8,7 +8,7 @@ impl<T> Pool<T> {
     }
 
     #[inline(always)]
-    pub fn add(&mut self, entry: T) -> Handle<T> {
+    pub fn push(&mut self, entry: T) -> Handle<T> {
         self.0.push(entry);
         Handle::new((self.0.len() - 1) as u32)
     }
