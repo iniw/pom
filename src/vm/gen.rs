@@ -17,7 +17,6 @@ use env::{EnvManager, Symbol};
 pub struct Generator<'syn> {
     program: Vec<Op>,
     envs: EnvManager<'syn>,
-    override_next_allocated_register: Option<u8>,
     function_generation_queue: Vec<SymbolDecl<'syn>>,
 }
 
@@ -27,7 +26,6 @@ impl<'syn> Generator<'syn> {
         Self {
             program: Vec::new(),
             envs: EnvManager::with_global_env(),
-            override_next_allocated_register: None,
             function_generation_queue: Vec::new(),
         }
     }
@@ -91,10 +89,7 @@ impl<'syn> Generator<'syn> {
                     self.queue_function_generation(stmts, identifier, stmt, *body)?;
                 }
                 SymbolInfo::Var(VarInfo::Value(expr)) => {
-                    let reg = self.allocate_reg();
-
-                    self.override_next_allocated_register = Some(reg);
-                    self.generate_expression(stmts, exprs, *expr)?;
+                    let reg = self.generate_expression(stmts, exprs, *expr)?;
 
                     self.envs
                         .declare_symbol(identifier, Symbol::Variable(reg))
@@ -134,17 +129,23 @@ impl<'syn> Generator<'syn> {
                 self.program.push(op);
                 Ok(dst)
             }
-            Expr::Block { beginning, count } => {
+            Expr::Block(block_stmts) => {
                 self.envs.push();
 
-                // TODO: Populate this register.
-                let dst = self.allocate_reg();
+                for stmt in &block_stmts[0..block_stmts.len() - 1] {
+                    self.generate_statement(stmts, exprs, *stmt)?;
+                }
 
-                let begin = *beginning as usize;
-                let end = (beginning + count) as usize;
-                for stmt in begin..end {
-                    let handle = unsafe { Handle::from_raw(stmt as u32) };
-                    self.generate_statement(stmts, exprs, handle)?;
+                let dst;
+                if let Some(last_stmt) = block_stmts.last() {
+                    if let Spanned(Stmt::Expr(expr), _) = stmts[*last_stmt] {
+                        dst = self.generate_expression(stmts, exprs, expr)?;
+                    } else {
+                        self.generate_statement(stmts, exprs, *last_stmt)?;
+                        dst = self.allocate_reg();
+                    }
+                } else {
+                    dst = self.allocate_reg();
                 }
 
                 self.envs.pop();
@@ -259,10 +260,6 @@ impl<'syn> Generator<'syn> {
 
     #[inline(always)]
     fn allocate_reg(&mut self) -> u8 {
-        if let Some(reg) = self.override_next_allocated_register.take() {
-            return reg;
-        }
-
         let count = &mut self.envs.active_function_frame().num_registers;
         std::mem::replace(count, *count + 1)
     }

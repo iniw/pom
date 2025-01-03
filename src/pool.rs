@@ -111,16 +111,6 @@ impl<T> Handle<T> {
             _phantom: std::marker::PhantomData {},
         }
     }
-
-    /// # Safety
-    /// `idx` must be a valid index into a `Pool<T>`
-    #[inline(always)]
-    pub unsafe fn from_raw(idx: u32) -> Self {
-        Self {
-            idx,
-            _phantom: std::marker::PhantomData {},
-        }
-    }
 }
 
 impl<T> Clone for Handle<T> {

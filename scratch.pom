@@ -3,6 +3,5 @@ other: fn = print 5 * 10 + 10;
 main: fn = {
     other();
     x := 100;
-    y + 100;
-    print x + 100;
+    print { { x + 100 } - 100 } + 200;
 };
