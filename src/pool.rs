@@ -1,3 +1,5 @@
+use std::ops::{Index, IndexMut};
+
 #[derive(Debug, Clone)]
 pub struct Pool<T>(Vec<T>);
 
@@ -9,23 +11,19 @@ impl<T> Pool<T> {
 
     #[inline(always)]
     pub fn push(&mut self, entry: T) -> Handle<T> {
+        let entry_handle = self.next_handle();
         self.0.push(entry);
-        Handle::new((self.0.len() - 1) as u32)
-    }
-
-    #[inline(always)]
-    pub fn get(&self, handle: Handle<T>) -> &T {
-        unsafe { self.0.get_unchecked(handle.idx as usize) }
-    }
-
-    #[inline(always)]
-    pub fn last(&self) -> Option<&T> {
-        self.0.last()
+        Handle::new(entry_handle)
     }
 
     #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+
+    #[inline(always)]
+    pub fn next_handle(&self) -> u32 {
+        self.0.len() as u32
     }
 
     pub fn handles(&self) -> PoolHandleIter<T> {
@@ -36,6 +34,22 @@ impl<T> Pool<T> {
 impl<T> Default for Pool<T> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl<T> Index<Handle<T>> for Pool<T> {
+    type Output = T;
+
+    #[inline(always)]
+    fn index(&self, handle: Handle<T>) -> &Self::Output {
+        unsafe { self.0.get_unchecked(handle.idx as usize) }
+    }
+}
+
+impl<T> IndexMut<Handle<T>> for Pool<T> {
+    #[inline(always)]
+    fn index_mut(&mut self, handle: Handle<T>) -> &mut Self::Output {
+        unsafe { self.0.get_unchecked_mut(handle.idx as usize) }
     }
 }
 
@@ -92,6 +106,16 @@ pub struct Handle<T> {
 impl<T> Handle<T> {
     #[inline(always)]
     fn new(idx: u32) -> Self {
+        Self {
+            idx,
+            _phantom: std::marker::PhantomData {},
+        }
+    }
+
+    /// # Safety
+    /// `idx` must be a valid index into a `Pool<T>`
+    #[inline(always)]
+    pub unsafe fn from_raw(idx: u32) -> Self {
         Self {
             idx,
             _phantom: std::marker::PhantomData {},
