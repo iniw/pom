@@ -62,7 +62,7 @@ impl<'lex> Parser<'lex> {
 
     fn parse_program(&mut self) {
         while let Missing(_) = chase!(self, Token::EndOfFile) {
-            match self.parse_statement() {
+            match self.parse_statement_and_semicolon() {
                 Ok(stmt) => _ = self.outer_stmts.push(stmt),
                 Err(err) => self.handle_error(err),
             }
@@ -76,7 +76,7 @@ impl<'lex> Parser<'lex> {
             [Caught(Token::Symbol(identifier)), Caught(_)] => {
                 match chase!(self, Token::Equal | Token::Fn) {
                     Caught(Token::Equal) => {
-                        let expr = self.parse_expression_and_semicolon()?;
+                        let expr = self.parse_expression()?;
                         Ok(self.new_stmt(
                             Stmt::SymbolDecl(SymbolDecl {
                                 identifier,
@@ -109,30 +109,25 @@ impl<'lex> Parser<'lex> {
             }
             _ => match chase!(self, Token::Print) {
                 Caught(_) => {
-                    let expr = self.parse_expression_and_semicolon()?;
+                    let expr = self.parse_expression()?;
                     Ok(self.new_stmt(Stmt::Print(expr), stmt_start))
                 }
-                Missing(_) => self.parse_statement_expression(stmt_start),
+                Missing(_) => {
+                    let expr = self.parse_expression()?;
+                    Ok(self.new_stmt(Stmt::Expr(expr), stmt_start))
+                }
             },
         }
     }
 
-    fn parse_statement_expression(
-        &mut self,
-        stmt_start: u32,
-    ) -> Result<Spanned<Stmt<'lex>>, Error> {
-        let expr = self.parse_expression_and_semicolon()?;
-        Ok(self.new_stmt(Stmt::Expr(expr), stmt_start))
-    }
-
-    fn parse_expression_and_semicolon(&mut self) -> Result<Handle<Spanned<Expr<'lex>>>, Error> {
-        let expr = self.parse_expression()?;
+    fn parse_statement_and_semicolon(&mut self) -> Result<Spanned<Stmt<'lex>>, Error> {
+        let stmt = self.parse_statement()?;
 
         if let Missing(token) = chase!(self, Token::Semicolon) {
             return Err(Error(Spanned(ErrorKind::ExpectedSemicolon, token.span())));
         }
 
-        Ok(expr)
+        Ok(stmt)
     }
 
     fn parse_expression(&mut self) -> Result<Handle<Spanned<Expr<'lex>>>, Error> {
@@ -221,8 +216,7 @@ impl<'lex> Parser<'lex> {
                     Ok(self.add_expr(Expr::Literal(Literal::Number(number)), expr_start))
                 }
                 Token::LeftBrace => {
-                    let beginning = self.stmts.next_handle();
-                    let mut count = 0;
+                    let mut stmts = Vec::new();
 
                     while let Missing(token) = chase!(self, Token::RightBrace) {
                         if let Token::EndOfFile = *token {
@@ -230,14 +224,24 @@ impl<'lex> Parser<'lex> {
                         }
 
                         match self.parse_statement() {
-                            Ok(stmt) => {
-                                self.stmts.push(stmt);
-                                count += 1;
-                            }
+                            Ok(stmt) => stmts.push(self.stmts.push(stmt)),
                             Err(err) => self.handle_error(err),
                         }
+
+                        match chase!(self, Token::RightBrace | Token::Semicolon) {
+                            Caught(Token::RightBrace) => break,
+                            Caught(Token::Semicolon) => continue,
+
+                            Missing(token) => self.handle_error(Error(Spanned(
+                                ErrorKind::UnexpectedToken,
+                                token.span(),
+                            ))),
+
+                            _ => unreachable!(),
+                        }
                     }
-                    Ok(self.add_expr(Expr::Block { beginning, count }, expr_start))
+
+                    Ok(self.add_expr(Expr::Block(stmts), expr_start))
                 }
                 Token::LeftParenthesis => {
                     let expr = self.parse_expression()?;
