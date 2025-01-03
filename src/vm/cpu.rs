@@ -62,7 +62,6 @@ impl<'gen> Processor<'gen> {
             #[cfg(debug_assertions)]
             {
                 dbg!(op);
-                dbg!(&self.regs);
             }
         }
     }

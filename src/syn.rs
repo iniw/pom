@@ -1,5 +1,3 @@
-use std::iter::Peekable;
-
 use crate::{
     lex::{
         span::{Span, Spanned},
@@ -8,21 +6,26 @@ use crate::{
     pool::{Handle, Pool},
 };
 
+pub mod ast;
 pub mod chase;
 pub mod error;
 
-use chase::{chase, ChaseResult::*};
+use ast::{BinaryOp, Expr, Literal, Stmt, SymbolDecl, SymbolInfo, VarInfo};
+use chase::{
+    chase, spanned_chase,
+    ChaseResult::{Caught, Missing},
+};
 use error::{Error, ErrorKind};
 
-pub struct Parser<'lex, I: Iterator + std::fmt::Debug> {
-    tokens: Peekable<I>,
+#[derive(Debug)]
+pub struct Parser<'lex> {
+    tokens: &'lex [Spanned<Token<'lex>>],
+    position: usize,
 
     stmts: Pool<Spanned<Stmt<'lex>>>,
     exprs: Pool<Spanned<Expr<'lex>>>,
     outer_stmts: Pool<Spanned<Stmt<'lex>>>,
     errors: Vec<Error>,
-
-    override_expr: Option<Spanned<Expr<'lex>>>,
 }
 
 pub struct ParseResult<'lex> {
@@ -32,18 +35,17 @@ pub struct ParseResult<'lex> {
     pub errors: Vec<Error>,
 }
 
-impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'lex, I> {
-    pub fn new(tokens: impl IntoIterator<IntoIter = I>) -> Self {
+impl<'lex> Parser<'lex> {
+    pub fn new(tokens: &'lex [Spanned<Token<'lex>>]) -> Self {
         Self {
-            tokens: tokens.into_iter().peekable(),
+            tokens,
+            position: 0,
 
             stmts: Pool::new(),
             exprs: Pool::new(),
             outer_stmts: Pool::new(),
 
             errors: Vec::new(),
-
-            override_expr: None,
         }
     }
 
@@ -59,7 +61,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
     }
 
     fn parse_program(&mut self) {
-        while let Missing(_) = chase!(self.tokens, Token::EndOfFile) {
+        while let Missing(_) = chase!(self, Token::EndOfFile) {
             match self.parse_statement() {
                 Ok(stmt) => _ = self.outer_stmts.push(stmt),
                 Err(err) => self.handle_error(err),
@@ -70,64 +72,48 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
     fn parse_statement(&mut self) -> Result<Spanned<Stmt<'lex>>, Error> {
         let stmt_start = self.span_start();
 
-        match chase!(self.tokens, Token::Symbol(_) | Token::Print) {
-            Caught(Spanned(token, span)) => match token {
-                Token::Symbol(identifier) => match chase!(self.tokens, Token::Colon) {
-                    Caught(_) => match chase!(self.tokens, Token::Equal | Token::Fn) {
-                        Caught(Spanned(token, _)) => match token {
-                            Token::Equal => {
-                                let expr = self.parse_expression_and_semicolon()?;
-                                Ok(self.new_stmt(
-                                    Stmt::SymbolDecl(SymbolDecl {
-                                        identifier,
-                                        info: SymbolInfo::Var(VarInfo::Value(expr)),
-                                    }),
-                                    stmt_start,
-                                ))
-                            }
-                            Token::Fn => {
-                                if let Missing(token) = chase!(self.tokens, Token::Equal) {
-                                    return Err(Error(Spanned(
-                                        ErrorKind::UnexpectedToken,
-                                        token.span(),
-                                    )));
-                                }
-
-                                let body = self.parse_statement()?;
-                                let stmt = self.stmts.push(body);
-                                Ok(self.new_stmt(
-                                    Stmt::SymbolDecl(SymbolDecl {
-                                        identifier,
-                                        info: SymbolInfo::Fn(stmt),
-                                    }),
-                                    stmt_start,
-                                ))
-                            }
-
-                            // This is just here to make the compiler shut up about missing match arms.
-                            _ => unreachable!(),
-                        },
-                        Missing(token) => {
-                            Err(Error(Spanned(ErrorKind::UnexpectedKind, token.span())))
-                        }
-                    },
-                    // Failed to find a colon, meaning this is just a normal expression beginning with
-                    // a symbol.
-                    // We can't backtrack on our chased tokens, so we do a little hack here for
-                    // overriding the next parsed expression with the consumed symbol.
-                    Missing(_) => {
-                        self.override_expr = Some(Spanned(Expr::Symbol(identifier), span));
-                        self.parse_statement_expression(stmt_start)
+        match chase!(self, Token::Symbol(_), Token::Colon) {
+            [Caught(Token::Symbol(identifier)), Caught(_)] => {
+                match chase!(self, Token::Equal | Token::Fn) {
+                    Caught(Token::Equal) => {
+                        let expr = self.parse_expression_and_semicolon()?;
+                        Ok(self.new_stmt(
+                            Stmt::SymbolDecl(SymbolDecl {
+                                identifier,
+                                info: SymbolInfo::Var(VarInfo::Value(expr)),
+                            }),
+                            stmt_start,
+                        ))
                     }
-                },
-                Token::Print => {
+                    Caught(Token::Fn) => {
+                        if let Missing(token) = chase!(self, Token::Equal) {
+                            return Err(Error(Spanned(ErrorKind::UnexpectedToken, token.span())));
+                        }
+
+                        let body = self.parse_statement()?;
+                        let stmt = self.stmts.push(body);
+                        Ok(self.new_stmt(
+                            Stmt::SymbolDecl(SymbolDecl {
+                                identifier,
+                                info: SymbolInfo::Fn(stmt),
+                            }),
+                            stmt_start,
+                        ))
+                    }
+
+                    Missing(token) => Err(Error(Spanned(ErrorKind::UnexpectedKind, token.span()))),
+
+                    // This is just here to make the compiler shut up about missing match arms.
+                    _ => unreachable!(),
+                }
+            }
+            _ => match chase!(self, Token::Print) {
+                Caught(_) => {
                     let expr = self.parse_expression_and_semicolon()?;
                     Ok(self.new_stmt(Stmt::Print(expr), stmt_start))
                 }
-                // This is just here to make the compiler shut up about missing match arms.
-                _ => unreachable!(),
+                Missing(_) => self.parse_statement_expression(stmt_start),
             },
-            Missing(_) => self.parse_statement_expression(stmt_start),
         }
     }
 
@@ -142,7 +128,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
     fn parse_expression_and_semicolon(&mut self) -> Result<Handle<Spanned<Expr<'lex>>>, Error> {
         let expr = self.parse_expression()?;
 
-        if let Missing(token) = chase!(self.tokens, Token::Semicolon) {
+        if let Missing(token) = chase!(self, Token::Semicolon) {
             return Err(Error(Spanned(ErrorKind::ExpectedSemicolon, token.span())));
         }
 
@@ -157,7 +143,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
         let expr_start = self.span_start();
         let mut expr = self.parse_precedence1()?;
 
-        while let Caught(Spanned(token, _)) = chase!(self.tokens, Token::Plus | Token::Minus) {
+        while let Caught(token) = chase!(self, Token::Plus | Token::Minus) {
             let op = match token {
                 Token::Plus => BinaryOp::Add,
                 Token::Minus => BinaryOp::Sub,
@@ -182,7 +168,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
         let expr_start = self.span_start();
         let mut expr = self.parse_precedence2()?;
 
-        while let Caught(Spanned(token, _)) = chase!(self.tokens, Token::Slash | Token::Star) {
+        while let Caught(token) = chase!(self, Token::Slash | Token::Star) {
             let op = match token {
                 Token::Slash => BinaryOp::Div,
                 Token::Star => BinaryOp::Mul,
@@ -207,8 +193,8 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
         let expr_start = self.span_start();
         let mut expr = self.parse_precedence3()?;
 
-        while let Caught(Spanned(_, span)) = chase!(self.tokens, Token::LeftParenthesis) {
-            if let Missing(token) = chase!(self.tokens, Token::RightParenthesis) {
+        while let Caught(Spanned(_, span)) = spanned_chase!(self, Token::LeftParenthesis) {
+            if let Missing(token) = chase!(self, Token::RightParenthesis) {
                 return Err(Error(Spanned(
                     ErrorKind::UnclosedFunctionParenthesis(span),
                     token.span(),
@@ -221,13 +207,9 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
     }
 
     fn parse_precedence3(&mut self) -> Result<Handle<Spanned<Expr<'lex>>>, Error> {
-        if let Some(Spanned(expr, span)) = self.override_expr.take() {
-            return Ok(self.add_spanned_expr(expr, span));
-        }
-
         let expr_start = self.span_start();
-        match chase!(
-            self.tokens,
+        match spanned_chase!(
+            self,
             Token::Symbol(_) | Token::Number(_) | Token::LeftBrace | Token::LeftParenthesis
         ) {
             Caught(Spanned(token, span)) => match token {
@@ -239,23 +221,28 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
                     Ok(self.add_expr(Expr::Literal(Literal::Number(number)), expr_start))
                 }
                 Token::LeftBrace => {
-                    let mut stmts = Vec::new();
-                    while let Missing(token) = chase!(self.tokens, Token::RightBrace) {
+                    let beginning = self.stmts.next_handle();
+                    let mut count = 0;
+
+                    while let Missing(token) = chase!(self, Token::RightBrace) {
                         if let Token::EndOfFile = *token {
                             return Err(Error(Spanned(ErrorKind::UnclosedBraces, span)));
                         }
 
                         match self.parse_statement() {
-                            Ok(stmt) => stmts.push(self.stmts.push(stmt)),
+                            Ok(stmt) => {
+                                self.stmts.push(stmt);
+                                count += 1;
+                            }
                             Err(err) => self.handle_error(err),
                         }
                     }
-                    Ok(self.add_expr(Expr::Block(stmts), expr_start))
+                    Ok(self.add_expr(Expr::Block { beginning, count }, expr_start))
                 }
                 Token::LeftParenthesis => {
                     let expr = self.parse_expression()?;
 
-                    if let Missing(token) = chase!(self.tokens, Token::RightParenthesis) {
+                    if let Missing(token) = chase!(self, Token::RightParenthesis) {
                         return Err(Error(Spanned(
                             ErrorKind::UnclosedExpressionParenthesis(span),
                             token.span(),
@@ -296,7 +283,7 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
     }
 
     fn span_start(&mut self) -> u32 {
-        self.tokens.peek().unwrap().span().start
+        self.peek().unwrap().span().start
     }
 
     fn handle_error(&mut self, error: Error) {
@@ -306,69 +293,21 @@ impl<'lex, I: Iterator<Item = Spanned<Token<'lex>>> + std::fmt::Debug> Parser<'l
 
     fn sync(&mut self) {
         // Consume tokens until we hit a semicolon, indicating the end of a statement. (or EOF).
-        while let Some(Spanned(token, _)) = self.tokens.peek() {
+        while let Some(Spanned(token, _)) = self.peek() {
             match token {
                 Token::EndOfFile => return,
                 Token::Semicolon => {
-                    self.tokens.next();
+                    self.position += 1;
                     return;
                 }
                 _ => {
-                    self.tokens.next();
+                    self.position += 1;
                 }
             }
         }
     }
-}
 
-#[derive(Debug, Clone)]
-pub enum Stmt<'lex> {
-    Expr(Handle<Spanned<Expr<'lex>>>),
-    SymbolDecl(SymbolDecl<'lex>),
-    Print(Handle<Spanned<Expr<'lex>>>),
-}
-
-#[derive(Debug, Clone)]
-pub struct SymbolDecl<'lex> {
-    pub identifier: &'lex str,
-    pub info: SymbolInfo<'lex>,
-}
-
-#[derive(Debug, Clone)]
-pub enum Expr<'lex> {
-    Binary {
-        left: Handle<Spanned<Expr<'lex>>>,
-        op: BinaryOp,
-        right: Handle<Spanned<Expr<'lex>>>,
-    },
-    Block(Vec<Handle<Spanned<Stmt<'lex>>>>),
-    Call(Handle<Spanned<Expr<'lex>>>),
-    Literal(Literal),
-    Symbol(&'lex str),
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum Literal {
-    Number(u32),
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum BinaryOp {
-    Div,
-    Mul,
-    Add,
-    Sub,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum VarInfo<'lex> {
-    Type(&'lex str),
-    Value(Handle<Spanned<Expr<'lex>>>),
-    TypeAndValue(&'lex str, Handle<Expr<'lex>>),
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum SymbolInfo<'lex> {
-    Var(VarInfo<'lex>),
-    Fn(Handle<Spanned<Stmt<'lex>>>),
+    fn peek(&self) -> Option<&Spanned<Token<'lex>>> {
+        self.tokens.get(self.position)
+    }
 }

@@ -41,7 +41,7 @@ fn main() {
             eprintln!();
         }
 
-        let parser = syn::Parser::new(tokens);
+        let parser = syn::Parser::new(&tokens);
         let ParseResult {
             outer_stmts,
             stmts,

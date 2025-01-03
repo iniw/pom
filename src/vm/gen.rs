@@ -1,7 +1,7 @@
 use crate::{
     lex::span::Spanned,
     pool::{Handle, Pool},
-    syn::{BinaryOp, Expr, Literal, Stmt, SymbolDecl, SymbolInfo, VarInfo},
+    syn::ast::{BinaryOp, Expr, Literal, Stmt, SymbolDecl, SymbolInfo, VarInfo},
 };
 
 use super::{
@@ -43,7 +43,7 @@ impl<'syn> Generator<'syn> {
         self.program = vec![Call { addr: 0 }, Halt];
 
         for stmt in outer_stmts.handles() {
-            let Spanned(stmt_data, span) = outer_stmts.get(stmt);
+            let Spanned(stmt_data, span) = &outer_stmts[stmt];
             match stmt_data {
                 Stmt::SymbolDecl(SymbolDecl {
                     identifier,
@@ -81,7 +81,7 @@ impl<'syn> Generator<'syn> {
         exprs: &Pool<Spanned<Expr<'syn>>>,
         stmt: Handle<Spanned<Stmt<'syn>>>,
     ) -> Result<(), Error<'syn>> {
-        let Spanned(stmt_data, span) = stmts.get(stmt);
+        let Spanned(stmt_data, span) = &stmts[stmt];
         match stmt_data {
             Stmt::Expr(expr) => {
                 self.generate_expression(stmts, exprs, *expr)?;
@@ -119,7 +119,7 @@ impl<'syn> Generator<'syn> {
         exprs: &Pool<Spanned<Expr<'syn>>>,
         expr: Handle<Spanned<Expr<'syn>>>,
     ) -> Result<u8, Error<'syn>> {
-        let Spanned(expr_data, span) = exprs.get(expr);
+        let Spanned(expr_data, span) = &exprs[expr];
         match expr_data {
             Expr::Binary { left, op, right } => {
                 let dst = self.allocate_reg();
@@ -134,20 +134,24 @@ impl<'syn> Generator<'syn> {
                 self.program.push(op);
                 Ok(dst)
             }
-            Expr::Block(block_stmts) => {
+            Expr::Block { beginning, count } => {
                 self.envs.push();
 
                 // TODO: Populate this register.
                 let dst = self.allocate_reg();
-                for stmt in block_stmts {
-                    self.generate_statement(stmts, exprs, *stmt)?;
+
+                let begin = *beginning as usize;
+                let end = (beginning + count) as usize;
+                for stmt in begin..end {
+                    let handle = unsafe { Handle::from_raw(stmt as u32) };
+                    self.generate_statement(stmts, exprs, handle)?;
                 }
 
                 self.envs.pop();
 
                 Ok(dst)
             }
-            Expr::Call(expr) => match &exprs.get(*expr).0 {
+            Expr::Call(expr) => match &exprs[*expr].0 {
                 Expr::Symbol(identifier) => match self
                     .envs
                     .find_symbol(identifier)
@@ -222,7 +226,7 @@ impl<'syn> Generator<'syn> {
             .declare_symbol(identifier, Symbol::Function(0))
             .ok_or(Error(Spanned(
                 ErrorKind::InvalidShadowing(identifier),
-                stmts.get(decl).span(),
+                stmts[decl].span(),
             )))?;
 
         self.function_generation_queue.push(SymbolDecl {
