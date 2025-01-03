@@ -1,6 +1,6 @@
 use crate::{lex::span::Spanned, pool::Handle};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Stmt<'lex> {
     Expr(Handle<Spanned<Expr<'lex>>>),
     SymbolDecl(SymbolDecl<'lex>),
@@ -13,17 +13,14 @@ pub struct SymbolDecl<'lex> {
     pub info: SymbolInfo<'lex>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Expr<'lex> {
     Binary {
         left: Handle<Spanned<Self>>,
         op: BinaryOp,
         right: Handle<Spanned<Self>>,
     },
-    Block {
-        beginning: u32,
-        count: u32,
-    },
+    Block(Vec<Handle<Spanned<Stmt<'lex>>>>),
     Call(Handle<Spanned<Self>>),
     Literal(Literal),
     Symbol(&'lex str),
