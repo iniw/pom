@@ -1,19 +1,13 @@
 use crate::{lex::span::Spanned, pool::Handle};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Stmt<'lex> {
     Expr(Handle<Spanned<Expr<'lex>>>),
     SymbolDecl(SymbolDecl<'lex>),
     Print(Handle<Spanned<Expr<'lex>>>),
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct SymbolDecl<'lex> {
-    pub identifier: &'lex str,
-    pub info: SymbolInfo<'lex>,
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Expr<'lex> {
     Binary {
         left: Handle<Spanned<Self>>,
@@ -26,12 +20,12 @@ pub enum Expr<'lex> {
     Symbol(&'lex str),
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug)]
 pub enum Literal {
     Number(u32),
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug)]
 pub enum BinaryOp {
     Div,
     Mul,
@@ -39,15 +33,21 @@ pub enum BinaryOp {
     Sub,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug)]
+pub struct SymbolDecl<'lex> {
+    pub identifier: &'lex str,
+    pub info: SymbolInfo<'lex>,
+}
+
+#[derive(Debug)]
+pub enum SymbolInfo<'lex> {
+    Var(VarInfo<'lex>),
+    Fn(Handle<Spanned<Stmt<'lex>>>),
+}
+
+#[derive(Debug)]
 pub enum VarInfo<'lex> {
     Type(&'lex str),
     Value(Handle<Spanned<Expr<'lex>>>),
     TypeAndValue(&'lex str, Handle<Expr<'lex>>),
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum SymbolInfo<'lex> {
-    Var(VarInfo<'lex>),
-    Fn(Handle<Spanned<Stmt<'lex>>>),
 }
