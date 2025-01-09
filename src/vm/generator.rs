@@ -32,22 +32,22 @@ impl<'syn> Generator<'syn> {
 
     pub fn generate(
         mut self,
-        outer_stmts: Pool<Spanned<Stmt<'syn>>>,
-        stmts: Pool<Spanned<Stmt<'syn>>>,
-        exprs: Pool<Spanned<Expr<'syn>>>,
+        global_stmts: &'syn Vec<Handle<Spanned<Stmt<'syn>>>>,
+        stmts: &'syn Pool<Spanned<Stmt<'syn>>>,
+        exprs: &'syn Pool<Spanned<Expr<'syn>>>,
     ) -> Result<Vec<Op>, Error<'syn>> {
         // The address here is the entry point, which will be patched up later when we find the
         // `main` symbol.
         self.program = vec![Call { addr: 0 }, Halt];
 
-        for stmt in outer_stmts.handles() {
-            let Spanned(stmt_data, span) = &outer_stmts[stmt];
+        for stmt in global_stmts {
+            let Spanned(stmt_data, span) = &stmts[*stmt];
             match stmt_data {
                 Stmt::SymbolDecl(SymbolDecl {
                     identifier,
                     info: SymbolInfo::Fn(body),
                 }) => {
-                    self.queue_function_generation(&stmts, identifier, stmt, *body)?;
+                    self.queue_function_generation(stmts, identifier, *stmt, *body)?;
                 }
                 Stmt::SymbolDecl(SymbolDecl {
                     // 'main' symbol in the outer scope that isn't a function.
@@ -63,7 +63,7 @@ impl<'syn> Generator<'syn> {
                 info: SymbolInfo::Fn(body),
             }) = self.function_generation_queue.pop()
             {
-                let addr = self.generate_function(&stmts, &exprs, identifier, body)?;
+                let addr = self.generate_function(stmts, exprs, identifier, body)?;
                 if identifier == "main" {
                     self.program[0] = Call { addr };
                 }
@@ -116,10 +116,10 @@ impl<'syn> Generator<'syn> {
     ) -> Result<u8, Error<'syn>> {
         let Spanned(expr_data, span) = &exprs[expr];
         match expr_data {
-            Expr::Binary { left, op, right } => {
+            Expr::Binary { lhs, op, rhs } => {
                 let dst = self.allocate_reg();
-                let left = self.generate_expression(stmts, exprs, *left)?;
-                let right = self.generate_expression(stmts, exprs, *right)?;
+                let left = self.generate_expression(stmts, exprs, *lhs)?;
+                let right = self.generate_expression(stmts, exprs, *rhs)?;
                 let op = match op {
                     BinaryOp::Add => Add { dst, left, right },
                     BinaryOp::Sub => Sub { dst, left, right },

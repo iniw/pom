@@ -1,34 +1,28 @@
 use crate::lex::{span::Spanned, Token};
 
 macro_rules! chase {
-    ($parser:expr, $pattern:pat $(if $guard:expr)? $(,)?) => {{
-        if let Some(token) = $parser.tokens.get($parser.position) {
-            if matches!(**token, $pattern $(if $guard)?) {
-                $parser.position += 1;
-                crate::syn::chase::ChaseResult::Caught(**token)
-            } else {
-                crate::syn::chase::ChaseResult::Missing(*token)
-            }
+    ($parser:expr, $pattern:pat $(if $guard:expr)?) => {{
+        let token = $parser.tokens.get($parser.position).expect("ICE: Reached end of token stream when chasing.");
+        if matches!(**token, $pattern $(if $guard)?) {
+            $parser.position += 1;
+            crate::syn::chase::ChaseResult::Caught(**token)
         } else {
-            panic!("ICE: Shouldn't reach end of token stream when chasing.");
+            crate::syn::chase::ChaseResult::Missing(*token)
         }
     }};
 
-    ($parser:expr, $($pattern:pat $(if $guard:expr)?),+ $(,)?) => {{
+    ($parser:expr, $($pattern:pat $(if $guard:expr)?),+) => {{
         const N: usize = ${count($pattern)};
 
         let mut results = [std::mem::MaybeUninit::uninit(); N];
         let mut matched_all = true;
         $(
-            if let Some(token) = $parser.tokens.get($parser.position + ${index()}) {
-                if matches!(**token, $pattern $(if $guard)?) {
-                    results[${index()}].write($crate::syn::chase::ChaseResult::Caught(**token));
-                } else {
-                    results[${index()}].write($crate::syn::chase::ChaseResult::Missing(*token));
-                    matched_all = false;
-                }
+            let token = $parser.tokens.get($parser.position + ${index()}).expect("ICE: Reached end of token stream when chasing.");
+            if matches!(**token, $pattern $(if $guard)?) {
+                results[${index()}].write($crate::syn::chase::ChaseResult::Caught(**token));
             } else {
-                panic!("ICE: Shouldn't reach end of token stream when chasing.");
+                results[${index()}].write($crate::syn::chase::ChaseResult::Missing(*token));
+                matched_all = false;
             }
         )+
 
@@ -45,34 +39,28 @@ macro_rules! chase {
 }
 
 macro_rules! spanned_chase {
-    ($parser:expr, $pattern:pat $(if $guard:expr)? $(,)?) => {{
-        if let Some(token) = $parser.tokens.get($parser.position) {
-            if matches!(**token, $pattern $(if $guard)?) {
-                $parser.position += 1;
-                crate::syn::chase::ChaseResult::Caught(*token)
-            } else {
-                crate::syn::chase::ChaseResult::Missing(*token)
-            }
+    ($parser:expr, $pattern:pat $(if $guard:expr)?) => {{
+        let token = $parser.tokens.get($parser.position).expect("ICE: Reached end of token stream when chasing.");
+        if matches!(**token, $pattern $(if $guard)?) {
+            $parser.position += 1;
+            crate::syn::chase::ChaseResult::Caught(*token)
         } else {
-            panic!("ICE: Shouldn't reach end of token stream when chasing.");
+            crate::syn::chase::ChaseResult::Missing(*token)
         }
     }};
 
-    ($parser:expr, $($pattern:pat $(if $guard:expr)?),+ $(,)?) => {{
+    ($parser:expr, $($pattern:pat $(if $guard:expr)?),+) => {{
         const N: usize = ${count($pattern)};
 
         let mut results = [std::mem::MaybeUninit::uninit(); N];
         let mut matched_all = true;
         $(
-            if let Some(token) = $parser.tokens.get($parser.position + ${index()}) {
-                if matches!(**token, $pattern $(if $guard)?) {
-                    results[${index()}].write($crate::syn::chase::ChaseResult::Caught(*token));
-                } else {
-                    results[${index()}].write($crate::syn::chase::ChaseResult::Missing(*token));
-                    matched_all = false;
-                }
+            let token = $parser.tokens.get($parser.position + ${index()}).expect("ICE: Reached end of token stream when chasing.");
+            if matches!(**token, $pattern $(if $guard)?) {
+                results[${index()}].write($crate::syn::chase::ChaseResult::Caught(*token));
             } else {
-                panic!("ICE: Shouldn't reach end of token stream when chasing.");
+                results[${index()}].write($crate::syn::chase::ChaseResult::Missing(*token));
+                matched_all = false;
             }
         )+
 

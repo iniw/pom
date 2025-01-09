@@ -1,17 +1,14 @@
-use std::ops::{Index, IndexMut};
-
 #[derive(Debug, Clone)]
 pub struct Pool<T>(Vec<T>);
 
 impl<T> Pool<T> {
-    pub fn new() -> Self {
-        // FIXME: Use a hint from the source code somehow?
-        Self(Vec::new())
+    pub fn with_capacity(cap: usize) -> Self {
+        Self(Vec::with_capacity(cap))
     }
 
     #[inline(always)]
     pub fn push(&mut self, entry: T) -> Handle<T> {
-        let entry_handle = self.next_handle();
+        let entry_handle = self.0.len() as u32;
         self.0.push(entry);
         Handle::new(entry_handle)
     }
@@ -20,24 +17,9 @@ impl<T> Pool<T> {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
-
-    #[inline(always)]
-    pub fn next_handle(&self) -> u32 {
-        self.0.len() as u32
-    }
-
-    pub fn handles(&self) -> PoolHandleIter<T> {
-        PoolHandleIter::new(self)
-    }
 }
 
-impl<T> Default for Pool<T> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<T> Index<Handle<T>> for Pool<T> {
+impl<T> std::ops::Index<Handle<T>> for Pool<T> {
     type Output = T;
 
     #[inline(always)]
@@ -46,7 +28,7 @@ impl<T> Index<Handle<T>> for Pool<T> {
     }
 }
 
-impl<T> IndexMut<Handle<T>> for Pool<T> {
+impl<T> std::ops::IndexMut<Handle<T>> for Pool<T> {
     #[inline(always)]
     fn index_mut(&mut self, handle: Handle<T>) -> &mut Self::Output {
         unsafe { self.0.get_unchecked_mut(handle.idx as usize) }
@@ -54,53 +36,33 @@ impl<T> IndexMut<Handle<T>> for Pool<T> {
 }
 
 impl<T> IntoIterator for Pool<T> {
-    type Item = T;
-    type IntoIter = <Vec<T> as IntoIterator>::IntoIter;
+    type Item = (Handle<T>, T);
+    type IntoIter = impl Iterator<Item = Self::Item>;
 
-    #[inline(always)]
     fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
+        self.0
+            .into_iter()
+            .enumerate()
+            .map(|(idx, item)| (Handle::new(idx as u32), item))
     }
 }
 
-impl<'a, T> IntoIterator for &'a Pool<T> {
-    type Item = &'a T;
-    type IntoIter = <&'a Vec<T> as IntoIterator>::IntoIter;
+impl<'pool, T> IntoIterator for &'pool Pool<T> {
+    type Item = (Handle<T>, &'pool T);
+    type IntoIter = impl Iterator<Item = Self::Item>;
 
-    #[inline(always)]
     fn into_iter(self) -> Self::IntoIter {
-        self.0.iter()
-    }
-}
-
-pub struct PoolHandleIter<'a, T> {
-    inner: std::ops::Range<u32>,
-    _phantom: std::marker::PhantomData<&'a Pool<T>>,
-}
-
-impl<'a, T> PoolHandleIter<'a, T> {
-    #[inline(always)]
-    pub fn new(pool: &'a Pool<T>) -> Self {
-        Self {
-            inner: 0..pool.0.len() as u32,
-            _phantom: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<'a, T> Iterator for PoolHandleIter<'a, T> {
-    type Item = Handle<T>;
-
-    #[inline(always)]
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(Handle::new)
+        self.0
+            .iter()
+            .enumerate()
+            .map(|(idx, item)| (Handle::new(idx as u32), item))
     }
 }
 
 #[derive(PartialEq, Eq)]
 pub struct Handle<T> {
     idx: u32,
-    _phantom: std::marker::PhantomData<T>,
+    phantom: std::marker::PhantomData<T>,
 }
 
 impl<T> Handle<T> {
@@ -108,7 +70,7 @@ impl<T> Handle<T> {
     fn new(idx: u32) -> Self {
         Self {
             idx,
-            _phantom: std::marker::PhantomData {},
+            phantom: std::marker::PhantomData {},
         }
     }
 }
@@ -124,8 +86,6 @@ impl<T> Copy for Handle<T> {}
 
 impl<T> std::fmt::Debug for Handle<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut type_name = std::any::type_name::<T>().to_owned();
-        type_name.drain(..type_name.rfind(':').map(|i| i + 1).unwrap_or(0));
-        write!(f, "Handle<{}>({})", type_name, self.idx)
+        write!(f, "Handle({})", self.idx)
     }
 }

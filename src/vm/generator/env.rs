@@ -118,7 +118,7 @@ pub struct Env<'syn> {
     symbols: HashMap<&'syn str, Symbol>,
 }
 
-impl<'syn> Env<'syn> {
+impl Env<'_> {
     fn new() -> Self {
         Self {
             function_frames: Vec::new(),

@@ -2,16 +2,16 @@ use std::mem;
 
 use super::{Op, Reg, Word};
 
-pub struct Processor<'gen> {
-    program: &'gen [Op],
+pub struct Processor<'generator> {
+    program: &'generator [Op],
     pc: Word,
 
     regs: Vec<Reg>,
     bp: Word,
 }
 
-impl<'gen> Processor<'gen> {
-    pub fn new(program: &'gen [Op]) -> Self {
+impl<'generator> Processor<'generator> {
+    pub fn new(program: &'generator [Op]) -> Self {
         Self {
             program,
             pc: 0,
