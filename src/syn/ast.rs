@@ -42,7 +42,7 @@ pub struct SymbolDecl<'lex> {
 #[derive(Debug)]
 pub enum SymbolInfo<'lex> {
     Var(VarInfo<'lex>),
-    Fn(Handle<Spanned<Stmt<'lex>>>),
+    Fn(Handle<Spanned<Expr<'lex>>>),
 }
 
 #[derive(Debug)]

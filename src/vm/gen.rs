@@ -192,13 +192,13 @@ impl<'syn> Generator<'syn> {
         stmts: &Pool<Spanned<Stmt<'syn>>>,
         exprs: &Pool<Spanned<Expr<'syn>>>,
         identifier: &'syn str,
-        body: Handle<Spanned<Stmt<'syn>>>,
+        body: Handle<Spanned<Expr<'syn>>>,
     ) -> Result<Word, Error<'syn>> {
         let prologue_addr = self.generate_prologue();
 
         self.envs.push_function_frame(identifier);
 
-        self.generate_statement(stmts, exprs, body)?;
+        self.generate_expression(stmts, exprs, body)?;
 
         self.generate_epilogue();
         self.patch_prologue(prologue_addr);
@@ -217,7 +217,7 @@ impl<'syn> Generator<'syn> {
         stmts: &Pool<Spanned<Stmt<'syn>>>,
         identifier: &'syn str,
         decl: Handle<Spanned<Stmt<'syn>>>,
-        body: Handle<Spanned<Stmt<'syn>>>,
+        body: Handle<Spanned<Expr<'syn>>>,
     ) -> Result<(), Error<'syn>> {
         // FIXME: Encode the fact that this function is not yet completed somehow,
         //        then generate `Call`s to it in a special way, maybe a `ToBePatchedCall` opcode or
