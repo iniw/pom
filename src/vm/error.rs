@@ -12,7 +12,7 @@ pub enum ErrorKind<'syn> {
 #[derive(Debug, Copy, Clone)]
 pub struct Error<'syn>(pub Spanned<ErrorKind<'syn>>);
 
-impl<'syn> Error<'syn> {
+impl Error<'_> {
     pub fn render(&self, source_code: &str) -> String {
         let Spanned(kind, span) = &self.0;
         match kind {

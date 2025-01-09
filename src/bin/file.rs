@@ -1,9 +1,9 @@
 use std::{env, fs, path::PathBuf, time};
 
 use pom::{
-    lex,
-    syn::{self, ParseResult},
-    vm,
+    lex::Lexer,
+    syn::{ParseResult, Parser},
+    vm::{cpu::Processor, generator::Generator},
 };
 
 #[allow(unused_variables)]
@@ -18,9 +18,13 @@ fn main() {
             continue;
         };
 
+        if src.is_empty() {
+            continue;
+        }
+
         let start = time::Instant::now();
 
-        let lexer = lex::Lexer::new(&src);
+        let lexer = Lexer::new(&src);
         let (tokens, errors) = lexer.lex();
 
         #[cfg(debug_assertions)]
@@ -41,9 +45,9 @@ fn main() {
             eprintln!();
         }
 
-        let parser = syn::Parser::new(&tokens);
+        let parser = Parser::new(&tokens);
         let ParseResult {
-            outer_stmts,
+            global_stmts,
             stmts,
             exprs,
             errors,
@@ -52,7 +56,8 @@ fn main() {
         #[cfg(debug_assertions)]
         if !stmts.is_empty() {
             eprintln!("Outer statements:");
-            for s in &outer_stmts {
+            for s in &global_stmts {
+                let s = &stmts[*s];
                 eprintln!("  - {}", s.render(&src))
             }
             eprintln!();
@@ -61,7 +66,7 @@ fn main() {
         #[cfg(debug_assertions)]
         if !stmts.is_empty() {
             eprintln!("Statements:");
-            for s in &stmts {
+            for (_, s) in &stmts {
                 eprintln!("  - {}", s.render(&src))
             }
             eprintln!();
@@ -70,7 +75,7 @@ fn main() {
         #[cfg(debug_assertions)]
         if !exprs.is_empty() {
             eprintln!("Expressions:");
-            for e in &exprs {
+            for (_, e) in &exprs {
                 eprintln!("  - {}", e.render(&src))
             }
             eprintln!();
@@ -82,19 +87,27 @@ fn main() {
                 eprintln!("  - {}", e.render(&src))
             }
             eprintln!();
-        } else {
-            let gen = vm::gen::Generator::new();
-            match gen.generate(outer_stmts, stmts, exprs) {
-                Ok(program) => {
-                    let cpu = vm::cpu::Processor::new(&program);
-                    cpu.run();
 
-                    #[cfg(debug_assertions)]
-                    dbg!(&program);
-                }
-                Err(err) => eprintln!("{}", err.render(&src)),
-            }
+            // Don't attempt generate/execute code if there were syntax errors.
+            continue;
         }
+
+        if stmts.is_empty() {
+            continue;
+        }
+
+        let generator = Generator::new();
+        match generator.generate(&global_stmts, &stmts, &exprs) {
+            Ok(program) => {
+                let cpu = Processor::new(&program);
+                cpu.run();
+
+                #[cfg(debug_assertions)]
+                dbg!(&program);
+            }
+            Err(err) => eprintln!("{}", err.render(&src)),
+        }
+
         println!("Total execution took: {:?}", start.elapsed());
     }
 }

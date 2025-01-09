@@ -10,12 +10,12 @@ pub enum Stmt<'lex> {
 #[derive(Debug)]
 pub enum Expr<'lex> {
     Binary {
-        left: Handle<Spanned<Self>>,
+        lhs: Handle<Spanned<Expr<'lex>>>,
         op: BinaryOp,
-        right: Handle<Spanned<Self>>,
+        rhs: Handle<Spanned<Expr<'lex>>>,
     },
     Block(Vec<Handle<Spanned<Stmt<'lex>>>>),
-    Call(Handle<Spanned<Self>>),
+    Call(Handle<Spanned<Expr<'lex>>>),
     Literal(Literal),
     Symbol(&'lex str),
 }

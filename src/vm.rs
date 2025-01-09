@@ -2,7 +2,7 @@ use std::ops;
 
 pub mod cpu;
 pub mod error;
-pub mod gen;
+pub mod generator;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Op {
