@@ -1,4 +1,6 @@
-other: fn = print 5 * 10 + 10;
+other: fn = {
+    print 5 * 10 + 10;
+};
 
 main: fn = {
     other();

@@ -90,12 +90,11 @@ impl<'lex> Parser<'lex> {
                             return Err(Error(Spanned(ErrorKind::UnexpectedToken, token.span())));
                         }
 
-                        let body = self.parse_statement()?;
-                        let stmt = self.stmts.push(body);
+                        let body = self.parse_expression()?;
                         Ok(self.new_stmt(
                             Stmt::SymbolDecl(SymbolDecl {
                                 identifier,
-                                info: SymbolInfo::Fn(stmt),
+                                info: SymbolInfo::Fn(body),
                             }),
                             stmt_start,
                         ))
@@ -213,6 +212,7 @@ impl<'lex> Parser<'lex> {
                     let number = number
                         .parse()
                         .map_err(|_| Error(Spanned(ErrorKind::InvalidNumericLiteral, span)))?;
+
                     Ok(self.add_expr(Expr::Literal(Literal::Number(number)), expr_start))
                 }
                 Token::LeftBrace => {
