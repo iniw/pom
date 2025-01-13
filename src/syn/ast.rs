@@ -2,8 +2,11 @@ use crate::{lex::span::Spanned, pool::Handle};
 
 #[derive(Debug)]
 pub enum Stmt<'lex> {
+    Declaration {
+        identifier: &'lex str,
+        info: DeclarationInfo<'lex>,
+    },
     Expr(Handle<Spanned<Expr<'lex>>>),
-    SymbolDecl(SymbolDecl<'lex>),
     Print(Handle<Spanned<Expr<'lex>>>),
 }
 
@@ -14,15 +17,20 @@ pub enum Expr<'lex> {
         op: BinaryOp,
         rhs: Handle<Spanned<Expr<'lex>>>,
     },
-    Block(Vec<Handle<Spanned<Stmt<'lex>>>>),
+    Block {
+        stmts: Vec<Handle<Spanned<Stmt<'lex>>>>,
+    },
     Call(Handle<Spanned<Expr<'lex>>>),
     Literal(Literal),
-    Symbol(&'lex str),
+    Symbol {
+        identifier: &'lex str,
+    },
 }
 
 #[derive(Debug)]
 pub enum Literal {
     Number(u32),
+    Record,
 }
 
 #[derive(Debug)]
@@ -34,20 +42,15 @@ pub enum BinaryOp {
 }
 
 #[derive(Debug)]
-pub struct SymbolDecl<'lex> {
-    pub identifier: &'lex str,
-    pub info: SymbolInfo<'lex>,
-}
-
-#[derive(Debug)]
-pub enum SymbolInfo<'lex> {
-    Var(VarInfo<'lex>),
-    Fn(Handle<Spanned<Expr<'lex>>>),
-}
-
-#[derive(Debug)]
-pub enum VarInfo<'lex> {
-    Type(&'lex str),
+pub enum DeclarationInfo<'lex> {
+    Kind(Kind<'lex>),
     Value(Handle<Spanned<Expr<'lex>>>),
-    TypeAndValue(&'lex str, Handle<Expr<'lex>>),
+    KindAndValue(Kind<'lex>, Handle<Expr<'lex>>),
+}
+
+#[derive(Debug)]
+enum Kind<'lex> {
+    Data(&'lex str),
+    Fn,
+    Unresolved,
 }

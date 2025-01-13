@@ -75,7 +75,7 @@ impl<'lex> Parser<'lex> {
                     Caught(Token::Equal) => {
                         let value = self.parse_expression()?;
                         Ok(self.push_stmt(
-                            Stmt::SymbolDecl(SymbolDecl {
+                            Stmt::Declaration(SymbolDecl {
                                 identifier,
                                 info: SymbolInfo::Var(VarInfo::Value(value)),
                             }),
@@ -89,7 +89,7 @@ impl<'lex> Parser<'lex> {
 
                         let body = self.parse_expression()?;
                         Ok(self.push_stmt(
-                            Stmt::SymbolDecl(SymbolDecl {
+                            Stmt::Declaration(SymbolDecl {
                                 identifier,
                                 info: SymbolInfo::Fn(body),
                             }),

@@ -3,7 +3,6 @@ use std::{env, fs, path::PathBuf, time};
 use pom::{
     lex::Lexer,
     syn::{ParseResult, Parser},
-    vm::{cpu::Processor, generator::Generator},
 };
 
 #[allow(unused_variables)]
@@ -87,25 +86,6 @@ fn main() {
                 eprintln!("  - {}", e.render(&src))
             }
             eprintln!();
-
-            // Don't attempt generate/execute code if there were syntax errors.
-            continue;
-        }
-
-        if stmts.is_empty() {
-            continue;
-        }
-
-        let generator = Generator::new();
-        match generator.generate(&global_stmts, &stmts, &exprs) {
-            Ok(program) => {
-                let cpu = Processor::new(&program);
-                cpu.run();
-
-                #[cfg(debug_assertions)]
-                dbg!(&program);
-            }
-            Err(err) => eprintln!("{}", err.render(&src)),
         }
 
         println!("Total execution took: {:?}", start.elapsed());

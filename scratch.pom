@@ -2,8 +2,34 @@ other: fn = {
     print 5 * 10 + 10;
 };
 
+Option: type [T: type] = |Some: T, None|;
+
+Nested := (
+    a: u32,
+    b: |u32, f32|,
+);
+
 main: fn = {
     other();
     x := 100;
+
+
+    a := Option::Some(100);
+
+    a := u32;
+    b := u32;
+
+
+    a := b;
+
+    a : type | (u32, u32) = (a, b);
+
+    a := (a = x, c = x); // data
+    a := (a : x, c : x); // type
+    a := (x, x);         // ?
+    a := ();             // ?
+
+    a := 1 + ();
+
     print { { x + 100 } - 100 } + 200;
 };
