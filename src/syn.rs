@@ -10,7 +10,7 @@ pub mod ast;
 pub mod chase;
 pub mod error;
 
-use ast::{BinaryOp, Expr, Literal, Stmt, SymbolDecl, SymbolInfo, VarInfo};
+use ast::{BinaryOp, DeclarationInfo, Expr, Kind, Literal, Stmt};
 use chase::{
     chase, spanned_chase,
     ChaseResult::{Caught, Missing},
@@ -75,10 +75,10 @@ impl<'lex> Parser<'lex> {
                     Caught(Token::Equal) => {
                         let value = self.parse_expression()?;
                         Ok(self.push_stmt(
-                            Stmt::Declaration(SymbolDecl {
+                            Stmt::Declaration {
                                 identifier,
-                                info: SymbolInfo::Var(VarInfo::Value(value)),
-                            }),
+                                info: DeclarationInfo::Value(value),
+                            },
                             stmt_start,
                         ))
                     }
@@ -89,10 +89,10 @@ impl<'lex> Parser<'lex> {
 
                         let body = self.parse_expression()?;
                         Ok(self.push_stmt(
-                            Stmt::Declaration(SymbolDecl {
+                            Stmt::Declaration {
                                 identifier,
-                                info: SymbolInfo::Fn(body),
-                            }),
+                                info: DeclarationInfo::KindAndValue(Kind::Fn, body),
+                            },
                             stmt_start,
                         ))
                     }
@@ -103,16 +103,10 @@ impl<'lex> Parser<'lex> {
                     _ => unreachable!(),
                 }
             }
-            _ => match chase!(self, Token::Print) {
-                Caught(_) => {
-                    let expr = self.parse_expression()?;
-                    Ok(self.push_stmt(Stmt::Print(expr), stmt_start))
-                }
-                Missing(_) => {
-                    let expr = self.parse_expression()?;
-                    Ok(self.push_stmt(Stmt::Expr(expr), stmt_start))
-                }
-            },
+            _ => {
+                let expr = self.parse_expression()?;
+                Ok(self.push_stmt(Stmt::Expr(expr), stmt_start))
+            }
         }
     }
 
@@ -198,7 +192,9 @@ impl<'lex> Parser<'lex> {
             Token::Symbol(_) | Token::Number(_) | Token::LeftBrace | Token::LeftParenthesis
         ) {
             Caught(Spanned(token, span)) => match token {
-                Token::Symbol(name) => Ok(self.push_expr(Expr::Symbol(name), expr_start)),
+                Token::Symbol(identifier) => {
+                    Ok(self.push_expr(Expr::Symbol { identifier }, expr_start))
+                }
                 Token::Number(number) => {
                     let number = number
                         .parse()
@@ -235,7 +231,7 @@ impl<'lex> Parser<'lex> {
                         }
                     }
 
-                    Ok(self.push_expr(Expr::Block(stmts), expr_start))
+                    Ok(self.push_expr(Expr::Block { stmts }, expr_start))
                 }
                 Token::LeftParenthesis => {
                     let expr = self.parse_expression()?;

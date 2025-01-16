@@ -1,13 +1,15 @@
 #![expect(dead_code)]
 use crate::{lex::span::Spanned, pool::Handle};
 
-pub type SymbolId = Handle<Symbol>;
+pub type SymbolId = Handle<DeclarationInfo>;
 
 #[derive(Debug)]
 pub enum Stmt {
+    Declaration {
+        identifier: SymbolId,
+        info: DeclarationInfo,
+    },
     Expr(Handle<Spanned<Expr>>),
-    SymbolDecl(SymbolId),
-    Print(Handle<Spanned<Expr>>),
 }
 
 #[derive(Debug)]
@@ -17,15 +19,20 @@ pub enum Expr {
         op: BinaryOp,
         rhs: Handle<Spanned<Expr>>,
     },
-    Block(Vec<Handle<Spanned<Stmt>>>),
+    Block {
+        stmts: Vec<Handle<Spanned<Stmt>>>,
+    },
     Call(Handle<Spanned<Expr>>),
     Literal(Literal),
-    Symbol(SymbolId),
+    Symbol {
+        identifier: SymbolId,
+    },
 }
 
 #[derive(Debug)]
 pub enum Literal {
     Number(u32),
+    Boolean(bool),
 }
 
 #[derive(Debug)]
@@ -37,20 +44,18 @@ pub enum BinaryOp {
 }
 
 #[derive(Debug)]
-pub struct SymbolDecl {
-    pub identifier: SymbolId,
-    pub info: SymbolInfo,
-}
-
-#[derive(Debug)]
-pub enum SymbolInfo {
-    Var(VarInfo),
-    Fn(Handle<Spanned<Expr>>),
-}
-
-#[derive(Debug)]
-pub enum VarInfo {
-    Type(SymbolId),
+pub enum DeclarationInfo {
+    Kind(Kind),
     Value(Handle<Spanned<Expr>>),
-    TypeAndValue(SymbolId, Handle<Expr>),
+    KindAndValue(Kind, Handle<Spanned<Expr>>),
+}
+
+#[derive(Debug)]
+pub enum Kind {
+    Bool,
+    Int,
+
+    Fn,
+
+    Bottom,
 }

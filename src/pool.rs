@@ -17,6 +17,16 @@ impl<T> Pool<T> {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+
+    #[inline(always)]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    #[inline(always)]
+    pub fn reserve(&mut self, additional: usize) {
+        self.0.reserve(additional)
+    }
 }
 
 impl<T> std::ops::Index<Handle<T>> for Pool<T> {

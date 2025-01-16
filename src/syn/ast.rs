@@ -7,7 +7,6 @@ pub enum Stmt<'lex> {
         info: DeclarationInfo<'lex>,
     },
     Expr(Handle<Spanned<Expr<'lex>>>),
-    Print(Handle<Spanned<Expr<'lex>>>),
 }
 
 #[derive(Debug)]
@@ -30,7 +29,7 @@ pub enum Expr<'lex> {
 #[derive(Debug)]
 pub enum Literal {
     Number(u32),
-    Record,
+    Boolean(bool),
 }
 
 #[derive(Debug)]
@@ -43,14 +42,17 @@ pub enum BinaryOp {
 
 #[derive(Debug)]
 pub enum DeclarationInfo<'lex> {
-    Kind(Kind<'lex>),
+    Kind(Kind),
     Value(Handle<Spanned<Expr<'lex>>>),
-    KindAndValue(Kind<'lex>, Handle<Expr<'lex>>),
+    KindAndValue(Kind, Handle<Spanned<Expr<'lex>>>),
 }
 
 #[derive(Debug)]
-enum Kind<'lex> {
-    Data(&'lex str),
+pub enum Kind {
+    Bool,
+    Int,
+
     Fn,
-    Unresolved,
+
+    Bottom,
 }
