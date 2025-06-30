@@ -1,5 +1,5 @@
 use std::{
-    collections::{hash_map::Entry, HashMap},
+    collections::{HashMap, hash_map::Entry},
     mem,
 };
 
@@ -35,10 +35,12 @@ impl<'syn> EnvManager<'syn> {
             .expect("There should aways be at least one env to pop (the global one).");
     }
 
+    #[allow(mismatched_lifetime_syntaxes)]
     pub fn active_function_frame(&mut self) -> &mut FunctionFrame {
         self.try_active_function_frame().unwrap()
     }
 
+    #[allow(mismatched_lifetime_syntaxes)]
     fn try_active_function_frame(&mut self) -> Option<&mut FunctionFrame> {
         for env in self.envs.iter_mut().rev() {
             if let Some(value) = env.function_frames.last_mut() {
