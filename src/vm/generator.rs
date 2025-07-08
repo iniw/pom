@@ -5,9 +5,9 @@ use crate::{
 };
 
 use super::{
-    error::{Error, ErrorKind},
     Op::{self, *},
     Word,
+    error::{Error, ErrorKind},
 };
 
 pub mod env;

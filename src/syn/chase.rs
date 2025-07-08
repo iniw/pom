@@ -1,4 +1,4 @@
-use crate::lex::{span::Spanned, Token};
+use crate::lex::{Token, span::Spanned};
 
 macro_rules! chase {
     ($parser:expr, $pattern:pat $(if $guard:expr)?) => {{

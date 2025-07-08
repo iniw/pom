@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  - push
+  - pull_request
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Nix CI (${{ matrix.system }})
+    runs-on: ${{ matrix.runner_label }}
+
+    permissions:
+      id-token: write
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - system: x86_64-linux
+            runner_label: ubuntu-latest
+          - system: x86_64-darwin
+            runner_label: macos-13
+          - system: aarch64-darwin
+            runner_label: macos-14
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v18
+        with:
+          determinate: true
+          extra-conf: lazy-trees = true
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v16
+        with:
+          name: wini
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Linting
+        run: nix develop --command cargo clippy -- -Dwarnings
+
+      - name: Formatting
+        run: nix develop --command cargo fmt --check
+
+      - name: Build
+        run: nix develop --command cargo build --bin file --release

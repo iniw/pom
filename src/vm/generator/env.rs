@@ -70,10 +70,10 @@ impl<'syn> EnvManager<'syn> {
     pub fn declare_symbol(&mut self, identifier: &'syn str, symbol: Symbol) -> Option<()> {
         // Disallow declaring symbols with the same name as the current function, if we are inside
         // one.
-        if let Some(frame) = self.try_active_function_frame() {
-            if identifier == frame.function_name {
-                return None;
-            }
+        if let Some(frame) = self.try_active_function_frame()
+            && frame.function_name == identifier
+        {
+            return None;
         }
 
         match self.active().symbols.entry(identifier) {
