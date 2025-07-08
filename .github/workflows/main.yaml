@@ -20,7 +20,7 @@ jobs:
           - system: x86_64-linux
             runner_label: ubuntu-latest
           - system: aarch64-darwin
-            runner_label: macos-14
+            runner_label: macos-latest
 
     steps:
       - name: Checkout Repository
