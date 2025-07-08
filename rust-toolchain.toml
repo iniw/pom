@@ -3,8 +3,8 @@ channel = "nightly-2025-07-08"
 components = [
   "cargo",
   "clippy",
+  "rust-analyzer",
   "rust-src",
   "rustc",
   "rustfmt",
-  "rust-analyzer",
 ]
