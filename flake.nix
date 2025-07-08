@@ -12,60 +12,62 @@
     {
       self,
       nixpkgs,
-      fenix,
       flake-utils,
+      fenix,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        overlays = [ fenix.overlays.default ];
-        pkgs = import nixpkgs { inherit system overlays; };
+        pkgs = import nixpkgs { inherit system; };
 
-        fenix-pkgs = import fenix { inherit system; };
-
-        rust-toolchain = fenix-pkgs.fromToolchainFile {
-          file = ./rust-toolchain.toml;
-          sha256 = "sha256-KrfXTnUMDG3QBuAb2PQGrRigTdJep1omsY63UBRhCf8=";
-        };
-
-        rustPlatform = pkgs.makeRustPlatform {
-          cargo = rust-toolchain;
-          rustc = rust-toolchain;
-        };
-
-        mkCheck =
-          name: command:
-          pkgs.stdenv.mkDerivation {
-            inherit name;
-            src = self;
-            buildInputs = [ rust-toolchain ];
-            buildPhase = ''
-              ${command}
-              mkdir "$out"
-            '';
-          };
+        toolchain = fenix.packages.${system}.complete.withComponents [
+          "cargo"
+          "clippy"
+          "rust-analyzer"
+          "rust-src"
+          "rustc"
+          "rustfmt"
+        ];
       in
       {
+        checks =
+          let
+            mkCheck =
+              name: command:
+              pkgs.stdenv.mkDerivation {
+                inherit name;
+                src = self;
+                buildInputs = [ toolchain ];
+                buildPhase = ''
+                  ${command}
+                  mkdir "$out"
+                '';
+              };
+          in
+          {
+            format = mkCheck "fmt" "cargo fmt --check";
+            lint = mkCheck "clippy" "cargo clippy -- -Dwarnings";
+            package = self.packages.${system}.default;
+          };
+
         devShells.default = pkgs.mkShell {
           packages = [
-            rust-toolchain
+            toolchain
           ];
         };
 
-        checks = {
-          lint = mkCheck "clippy" "cargo clippy -- -Dwarnings";
-          format = mkCheck "fmt" "cargo fmt --check";
-          package = self.packages.${system}.default;
-        };
-
-        packages = rec {
-          pom = rustPlatform.buildRustPackage {
+        packages.default =
+          let
+            rustPlatform = pkgs.makeRustPlatform {
+              cargo = toolchain;
+              rustc = toolchain;
+            };
+          in
+          rustPlatform.buildRustPackage {
             name = "pom";
             src = self;
             cargoLock.lockFile = ./Cargo.lock;
           };
-          default = pom;
-        };
       }
     );
 }
