@@ -37,13 +37,12 @@
           name: command:
           pkgs.stdenv.mkDerivation {
             inherit name;
-            src = ./.;
-            dontBuild = true;
-            dontFixup = true;
-            doCheck = true;
-            nativeBuildInputs = [ rust-toolchain ];
-            checkPhase = command;
-            installPhase = ''mkdir "$out"'';
+            src = self;
+            buildInputs = [ rust-toolchain ];
+            buildPhase = ''
+              ${command}
+              mkdir "$out"
+            '';
           };
       in
       {
@@ -57,15 +56,15 @@
           check = mkCheck "check" "cargo check";
           lint = mkCheck "clippy" "cargo clippy -- -Dwarnings";
           format = mkCheck "fmt" "cargo fmt --check";
+          build = self.packages.${system}.default;
         };
 
         packages = rec {
           pom = rustPlatform.buildRustPackage {
             name = "pom";
-            src = ./.;
+            src = self;
             cargoLock.lockFile = ./Cargo.lock;
           };
-
           default = pom;
         };
       }
