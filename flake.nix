@@ -53,10 +53,9 @@
         };
 
         checks = {
-          check = mkCheck "check" "cargo check";
           lint = mkCheck "clippy" "cargo clippy -- -Dwarnings";
           format = mkCheck "fmt" "cargo fmt --check";
-          build = self.packages.${system}.default;
+          package = self.packages.${system}.default;
         };
 
         packages = rec {
