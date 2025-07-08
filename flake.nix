@@ -24,7 +24,7 @@
         fenix-pkgs = import fenix { inherit system; };
         rust-toolchain = fenix-pkgs.fromToolchainFile {
           file = ./rust-toolchain.toml;
-          sha256 = "sha256-FuOGHL+DbavyycfaDakNP1ANZ0qox3ha+v2/4MVI5YY=";
+          sha256 = "sha256-KrfXTnUMDG3QBuAb2PQGrRigTdJep1omsY63UBRhCf8=";
         };
       in
       {
