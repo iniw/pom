@@ -1,7 +1,7 @@
 use crate::{
     lex::{
-        span::{Span, Spanned},
         Token,
+        span::{Span, Spanned},
     },
     pool::{Handle, Pool},
 };
@@ -12,8 +12,8 @@ pub mod error;
 
 use ast::{BinaryOp, Expr, Literal, Stmt, SymbolDecl, SymbolInfo, VarInfo};
 use chase::{
-    chase, spanned_chase,
     ChaseResult::{Caught, Missing},
+    chase, spanned_chase,
 };
 use error::{Error, ErrorKind};
 
