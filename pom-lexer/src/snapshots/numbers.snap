@@ -1,0 +1,37 @@
+---
+source: pom-lexer/src/tests.rs
+expression: "lex(\"55 55.47 -55 +47.55\")"
+---
+(
+    [
+        Token {
+            kind: Int,
+            span: Span {
+                start: 0,
+                end: 2,
+            },
+        },
+        Token {
+            kind: Float,
+            span: Span {
+                start: 3,
+                end: 8,
+            },
+        },
+        Token {
+            kind: Int,
+            span: Span {
+                start: 9,
+                end: 12,
+            },
+        },
+        Token {
+            kind: Float,
+            span: Span {
+                start: 13,
+                end: 19,
+            },
+        },
+    ],
+    [],
+)

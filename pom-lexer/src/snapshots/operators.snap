@@ -1,0 +1,23 @@
+---
+source: pom-lexer/src/tests.rs
+expression: "lex(\"+ -\")"
+---
+(
+    [
+        Token {
+            kind: Plus,
+            span: Span {
+                start: 0,
+                end: 1,
+            },
+        },
+        Token {
+            kind: Minus,
+            span: Span {
+                start: 2,
+                end: 3,
+            },
+        },
+    ],
+    [],
+)
