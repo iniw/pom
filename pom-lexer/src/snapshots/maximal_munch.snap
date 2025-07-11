@@ -1,0 +1,23 @@
+---
+source: pom-lexer/src/tests.rs
+expression: "lex(\"truee falsee\")"
+---
+(
+    [
+        Token {
+            kind: Ident,
+            span: Span {
+                start: 0,
+                end: 5,
+            },
+        },
+        Token {
+            kind: Ident,
+            span: Span {
+                start: 6,
+                end: 12,
+            },
+        },
+    ],
+    [],
+)

@@ -1,0 +1,9 @@
+[package]
+name = "pom"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.5.41", features = ["derive"] }
+pom-lexer = { path = "../pom-lexer" }
+pom-parser = { path = "../pom-parser" }

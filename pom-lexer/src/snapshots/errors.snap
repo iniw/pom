@@ -1,0 +1,52 @@
+---
+source: pom-lexer/src/tests.rs
+expression: "lex(\"55 ^ $ 47\")"
+---
+(
+    [
+        Token {
+            kind: Int,
+            span: Span {
+                start: 0,
+                end: 2,
+            },
+        },
+        Token {
+            kind: Invalid,
+            span: Span {
+                start: 3,
+                end: 4,
+            },
+        },
+        Token {
+            kind: Invalid,
+            span: Span {
+                start: 5,
+                end: 6,
+            },
+        },
+        Token {
+            kind: Int,
+            span: Span {
+                start: 7,
+                end: 9,
+            },
+        },
+    ],
+    [
+        Error {
+            kind: UnknownToken,
+            span: Span {
+                start: 3,
+                end: 4,
+            },
+        },
+        Error {
+            kind: UnknownToken,
+            span: Span {
+                start: 5,
+                end: 6,
+            },
+        },
+    ],
+)

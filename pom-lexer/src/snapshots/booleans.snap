@@ -1,0 +1,27 @@
+---
+source: pom-lexer/src/tests.rs
+expression: "lex(\"true false\")"
+---
+(
+    [
+        Token {
+            kind: Bool(
+                true,
+            ),
+            span: Span {
+                start: 0,
+                end: 4,
+            },
+        },
+        Token {
+            kind: Bool(
+                false,
+            ),
+            span: Span {
+                start: 5,
+                end: 10,
+            },
+        },
+    ],
+    [],
+)

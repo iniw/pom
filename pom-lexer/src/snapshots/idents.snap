@@ -1,0 +1,58 @@
+---
+source: pom-lexer/src/tests.rs
+expression: "lex(\"w w1 _ _w1 W W1 W1_1W\")"
+---
+(
+    [
+        Token {
+            kind: Ident,
+            span: Span {
+                start: 0,
+                end: 1,
+            },
+        },
+        Token {
+            kind: Ident,
+            span: Span {
+                start: 2,
+                end: 4,
+            },
+        },
+        Token {
+            kind: Ident,
+            span: Span {
+                start: 5,
+                end: 6,
+            },
+        },
+        Token {
+            kind: Ident,
+            span: Span {
+                start: 7,
+                end: 10,
+            },
+        },
+        Token {
+            kind: Ident,
+            span: Span {
+                start: 11,
+                end: 12,
+            },
+        },
+        Token {
+            kind: Ident,
+            span: Span {
+                start: 13,
+                end: 15,
+            },
+        },
+        Token {
+            kind: Ident,
+            span: Span {
+                start: 16,
+                end: 21,
+            },
+        },
+    ],
+    [],
+)
