@@ -10,7 +10,15 @@ pub struct Stmt {
 
 #[derive(Debug, PartialEq)]
 pub enum StmtKind {
+    Block(Vec<Id<Stmt>>),
+
     Expr(Id<Expr>),
+
+    Decl {
+        lhs: Id<Expr>,
+        kind: Option<Id<Expr>>,
+        rhs: Id<Expr>,
+    },
 
     Invalid,
 }

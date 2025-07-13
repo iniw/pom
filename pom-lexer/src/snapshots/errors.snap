@@ -32,6 +32,13 @@ expression: "lex(\"55 ^ $ 47\")"
                 end: 9,
             },
         },
+        Token {
+            kind: Eof,
+            span: Span {
+                start: 4294967295,
+                end: 4294967295,
+            },
+        },
     ],
     [
         Error {

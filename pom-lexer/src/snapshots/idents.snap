@@ -53,6 +53,13 @@ expression: "lex(\"w w1 _ _w1 W W1 W1_1W\")"
                 end: 21,
             },
         },
+        Token {
+            kind: Eof,
+            span: Span {
+                start: 4294967295,
+                end: 4294967295,
+            },
+        },
     ],
     [],
 )

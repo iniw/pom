@@ -9,6 +9,54 @@ fn lex_and_parse(src: &str) -> (Ast, Errors) {
 }
 
 #[test]
-fn sums() {
-    snap!(lex_and_parse("1 + 1 + 1"));
+fn empty() {
+    snap!(lex_and_parse(""));
+    snap!(lex_and_parse(";"));
+}
+
+#[test]
+fn precedence() {
+    snap!(lex_and_parse("(1 + 1) / 2 * 3 + 1;"));
+}
+
+#[test]
+fn bind() {
+    snap!(lex_and_parse("var := 55;"));
+    snap!(lex_and_parse("55 := 47;"));
+    snap!(lex_and_parse("var: u32 = 47;"));
+    snap!(lex_and_parse("var: 55 = 47;"));
+}
+
+#[test]
+fn block_stmt() {
+    snap!(lex_and_parse("{55 + 47; 1 * 1;}"));
+    snap!(lex_and_parse("{55 + 47;}"));
+    snap!(lex_and_parse("{;}"));
+    snap!(lex_and_parse("{}"));
+}
+
+#[test]
+fn unbalanced_block_stmt() {
+    snap!(lex_and_parse("{55 + 47;;"));
+    snap!(lex_and_parse("{55 + 47;"));
+    snap!(lex_and_parse("{55 + 47"));
+    snap!(lex_and_parse("{;"));
+    snap!(lex_and_parse("{"));
+}
+
+#[test]
+fn paren() {
+    snap!(lex_and_parse("(55 + 47);"));
+    snap!(lex_and_parse("(10);"));
+    snap!(lex_and_parse("(;);"));
+    snap!(lex_and_parse("();"));
+}
+
+#[test]
+fn unbalanced_paren() {
+    snap!(lex_and_parse("(55 + 47;;"));
+    snap!(lex_and_parse("(55 + 47;"));
+    snap!(lex_and_parse("(55 + 47"));
+    snap!(lex_and_parse("(;"));
+    snap!(lex_and_parse("("));
 }

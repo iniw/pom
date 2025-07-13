@@ -1,0 +1,51 @@
+---
+source: pom-parser/src/tests.rs
+expression: "lex_and_parse(\"{;}\")"
+---
+(
+    Ast {
+        items: [
+            Id(0),
+        ],
+        stmts: Arena(
+            [
+                Stmt {
+                    kind: Block(
+                        [],
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 3,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [],
+        ),
+    },
+    [
+        Error {
+            kind: UnexpectedToken {
+                expected: [
+                    Bool,
+                    Float,
+                    Ident,
+                    Int,
+                    LParen,
+                ],
+                got: Token {
+                    kind: Semicolon,
+                    span: Span {
+                        start: 1,
+                        end: 2,
+                    },
+                },
+            },
+            span: Span {
+                start: 0,
+                end: 1,
+            },
+        },
+    ],
+)

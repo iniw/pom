@@ -18,6 +18,13 @@ expression: "lex(\"+ -\")"
                 end: 3,
             },
         },
+        Token {
+            kind: Eof,
+            span: Span {
+                start: 4294967295,
+                end: 4294967295,
+            },
+        },
     ],
     [],
 )

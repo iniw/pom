@@ -1,0 +1,28 @@
+---
+source: pom-parser/src/tests.rs
+expression: "lex_and_parse(\"{}\")"
+---
+(
+    Ast {
+        items: [
+            Id(0),
+        ],
+        stmts: Arena(
+            [
+                Stmt {
+                    kind: Block(
+                        [],
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 2,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [],
+        ),
+    },
+    [],
+)

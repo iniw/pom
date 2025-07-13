@@ -9,7 +9,6 @@ use crate::{
 
 pub struct Lexer<'src> {
     lexer: logos::SpannedIter<'src, TokenKind>,
-
     tokens: Tokens,
     errors: Errors,
 }
@@ -18,7 +17,6 @@ impl<'src> Lexer<'src> {
     pub fn new(src: &'src str) -> Self {
         Self {
             lexer: TokenKind::lexer(src).spanned(),
-
             tokens: Tokens::new(),
             errors: Errors::new(),
         }
@@ -41,6 +39,8 @@ impl<'src> Lexer<'src> {
                 }
             }
         }
+
+        self.tokens.push(Token::eof());
 
         (self.tokens, self.errors)
     }

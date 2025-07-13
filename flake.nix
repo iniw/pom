@@ -54,7 +54,7 @@
             typos = check "typos" "typos" [ pkgs.typos ];
           }
           # Check that every package builds.
-          # `buildRustPackage` also runs tests in the checkPhase, so this also ensures that all tests pass.
+          # `buildRustPackage` also runs tests in the derivation's checkPhase, so this also ensures that all tests pass.
           // self.packages.${system};
 
         devShells.default = pkgs.mkShell {
@@ -80,8 +80,7 @@
               };
           in
           {
-            # Each crate in the workspace gets a corresponding flake package.
-            # This ensures they can all be individually built, tested and published.
+            # Each crate in the workspace gets a corresponding flake package, this ensures they can all be individually built, tested and published.
             pom = package "pom";
             pom-lexer = package "pom-lexer";
             pom-parser = package "pom-parser";

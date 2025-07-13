@@ -1,0 +1,49 @@
+---
+source: pom-parser/src/tests.rs
+expression: "lex_and_parse(\"var := 55;\")"
+---
+(
+    Ast {
+        items: [
+            Id(0),
+        ],
+        stmts: Arena(
+            [
+                Stmt {
+                    kind: Decl {
+                        lhs: Id(0),
+                        kind: None,
+                        rhs: Id(1),
+                    },
+                    span: Span {
+                        start: 0,
+                        end: 10,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 0,
+                        end: 3,
+                    },
+                },
+                Expr {
+                    kind: Number(
+                        Int(
+                            55,
+                        ),
+                    ),
+                    span: Span {
+                        start: 7,
+                        end: 9,
+                    },
+                },
+            ],
+        ),
+    },
+    [],
+)
