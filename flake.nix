@@ -40,7 +40,8 @@
                   lockFile = ./Cargo.lock;
                 };
 
-                # Create the output folder to make the derivation succeed because the command won't produce any output.
+                # Manually create the $out folder to make the derivation build successfully - nix derivations must produce an output.
+                # See: https://github.com/NixOS/nixpkgs/issues/16182
                 buildPhase = ''
                   ${command}
                   mkdir "$out"
@@ -53,7 +54,7 @@
             typos = check "typos" "typos" [ pkgs.typos ];
           }
           # Check that every package builds.
-          # `buildRustPackage` also runs tests for the package in the checkPhase, so this also makes sure that all tests succeed.
+          # `buildRustPackage` also runs tests in the checkPhase, so this also ensures that all tests pass.
           // self.packages.${system};
 
         devShells.default = pkgs.mkShell {
@@ -79,6 +80,8 @@
               };
           in
           {
+            # Each crate in the workspace gets a corresponding flake package.
+            # This ensures they can all be individually built, tested and published.
             pom = package "pom";
             pom-lexer = package "pom-lexer";
             pom-parser = package "pom-parser";
