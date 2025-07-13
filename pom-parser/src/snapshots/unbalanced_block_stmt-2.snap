@@ -1,0 +1,68 @@
+---
+source: pom-parser/src/tests.rs
+expression: "lex_and_parse(\"{55 + 47;\")"
+---
+(
+    Ast {
+        items: [],
+        stmts: Arena(
+            [
+                Stmt {
+                    kind: Expr(
+                        Id(2),
+                    ),
+                    span: Span {
+                        start: 1,
+                        end: 9,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [
+                Expr {
+                    kind: Number(
+                        Int(
+                            55,
+                        ),
+                    ),
+                    span: Span {
+                        start: 1,
+                        end: 3,
+                    },
+                },
+                Expr {
+                    kind: Number(
+                        Int(
+                            47,
+                        ),
+                    ),
+                    span: Span {
+                        start: 6,
+                        end: 8,
+                    },
+                },
+                Expr {
+                    kind: Binary {
+                        lhs: Id(0),
+                        op: Add,
+                        rhs: Id(1),
+                    },
+                    span: Span {
+                        start: 1,
+                        end: 8,
+                    },
+                },
+            ],
+        ),
+    },
+    [
+        Error {
+            kind: UnbalancedBlock,
+            span: Span {
+                start: 0,
+                end: 9,
+            },
+        },
+    ],
+)

@@ -3,6 +3,14 @@ source: pom-lexer/src/tests.rs
 expression: "lex(\" \\t\\r\\n\")"
 ---
 (
-    [],
+    [
+        Token {
+            kind: Eof,
+            span: Span {
+                start: 4294967295,
+                end: 4294967295,
+            },
+        },
+    ],
     [],
 )

@@ -1,0 +1,139 @@
+---
+source: pom-parser/src/tests.rs
+expression: "lex_and_parse(\"(1 + 1) / 2 * 3 + 1;\")"
+---
+(
+    Ast {
+        items: [
+            Id(0),
+        ],
+        stmts: Arena(
+            [
+                Stmt {
+                    kind: Expr(
+                        Id(9),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 20,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [
+                Expr {
+                    kind: Number(
+                        Int(
+                            1,
+                        ),
+                    ),
+                    span: Span {
+                        start: 1,
+                        end: 2,
+                    },
+                },
+                Expr {
+                    kind: Number(
+                        Int(
+                            1,
+                        ),
+                    ),
+                    span: Span {
+                        start: 5,
+                        end: 6,
+                    },
+                },
+                Expr {
+                    kind: Binary {
+                        lhs: Id(0),
+                        op: Add,
+                        rhs: Id(1),
+                    },
+                    span: Span {
+                        start: 1,
+                        end: 6,
+                    },
+                },
+                Expr {
+                    kind: Paren(
+                        Some(
+                            Id(2),
+                        ),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 7,
+                    },
+                },
+                Expr {
+                    kind: Number(
+                        Int(
+                            2,
+                        ),
+                    ),
+                    span: Span {
+                        start: 10,
+                        end: 11,
+                    },
+                },
+                Expr {
+                    kind: Binary {
+                        lhs: Id(3),
+                        op: Div,
+                        rhs: Id(4),
+                    },
+                    span: Span {
+                        start: 0,
+                        end: 11,
+                    },
+                },
+                Expr {
+                    kind: Number(
+                        Int(
+                            3,
+                        ),
+                    ),
+                    span: Span {
+                        start: 14,
+                        end: 15,
+                    },
+                },
+                Expr {
+                    kind: Binary {
+                        lhs: Id(5),
+                        op: Mul,
+                        rhs: Id(6),
+                    },
+                    span: Span {
+                        start: 0,
+                        end: 15,
+                    },
+                },
+                Expr {
+                    kind: Number(
+                        Int(
+                            1,
+                        ),
+                    ),
+                    span: Span {
+                        start: 18,
+                        end: 19,
+                    },
+                },
+                Expr {
+                    kind: Binary {
+                        lhs: Id(7),
+                        op: Add,
+                        rhs: Id(8),
+                    },
+                    span: Span {
+                        start: 0,
+                        end: 19,
+                    },
+                },
+            ],
+        ),
+    },
+    [],
+)

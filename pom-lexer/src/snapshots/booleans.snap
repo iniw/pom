@@ -5,21 +5,24 @@ expression: "lex(\"true false\")"
 (
     [
         Token {
-            kind: Bool(
-                true,
-            ),
+            kind: Bool,
             span: Span {
                 start: 0,
                 end: 4,
             },
         },
         Token {
-            kind: Bool(
-                false,
-            ),
+            kind: Bool,
             span: Span {
                 start: 5,
                 end: 10,
+            },
+        },
+        Token {
+            kind: Eof,
+            span: Span {
+                start: 4294967295,
+                end: 4294967295,
             },
         },
     ],

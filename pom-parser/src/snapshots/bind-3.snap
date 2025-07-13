@@ -1,0 +1,58 @@
+---
+source: pom-parser/src/tests.rs
+expression: "lex_and_parse(\"var: u32 = 47;\")"
+---
+(
+    Ast {
+        items: [
+            Id(0),
+        ],
+        stmts: Arena(
+            [
+                Stmt {
+                    kind: Decl {
+                        lhs: Id(0),
+                        kind: Some(
+                            Id(1),
+                        ),
+                        rhs: Id(2),
+                    },
+                    span: Span {
+                        start: 0,
+                        end: 14,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 0,
+                        end: 3,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 5,
+                        end: 8,
+                    },
+                },
+                Expr {
+                    kind: Number(
+                        Int(
+                            47,
+                        ),
+                    ),
+                    span: Span {
+                        start: 11,
+                        end: 13,
+                    },
+                },
+            ],
+        ),
+    },
+    [],
+)

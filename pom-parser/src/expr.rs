@@ -20,6 +20,8 @@ pub enum ExprKind {
 
     Ident,
 
+    Paren(Option<Id<Expr>>),
+
     Invalid,
 }
 

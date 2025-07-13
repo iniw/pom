@@ -2,10 +2,10 @@ use pom_lexer::token::Token;
 
 macro_rules! chase {
     ($parser:expr, $pattern:pat $(if $guard:expr)?) => {{
-        let token = $parser.peek();
+        let token = $parser.tokens[$parser.cursor];
         match token.kind {
             $pattern $(if $guard)? => {
-                $parser.pos += 1;
+                $parser.cursor += 1;
                 $crate::chase::ChaseResult::Caught(token)
             }
             _ => $crate::chase::ChaseResult::Missing(token),
@@ -15,7 +15,7 @@ macro_rules! chase {
 
 pub(crate) use chase;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum ChaseResult {
     Caught(Token),
     Missing(Token),

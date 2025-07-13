@@ -22,9 +22,18 @@ impl Token {
 #[logos(error = ErrorKind)]
 #[logos(skip r"[ \t\r\n\f]+")]
 pub enum TokenKind {
-    #[token(r"false", |_| false)]
-    #[token(r"true", |_| true)]
-    Bool(bool),
+    #[token(r"true")]
+    #[token(r"false")]
+    Bool,
+
+    #[token(r":")]
+    Colon,
+
+    #[token(r"=")]
+    Equal,
+
+    #[regex(r"[-+]?[0-9]+\.[0-9]+")]
+    Float,
 
     #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*")]
     Ident,
@@ -32,20 +41,32 @@ pub enum TokenKind {
     #[regex(r"[-+]?[0-9]+")]
     Int,
 
-    #[regex(r"[-+]?[0-9]+\.[0-9]+")]
-    Float,
+    #[token(r"{")]
+    LBrace,
 
-    #[token(r"+")]
-    Plus,
+    #[token(r"(")]
+    LParen,
 
     #[token(r"-")]
     Minus,
 
-    #[token(r"*")]
-    Star,
+    #[token(r"+")]
+    Plus,
+
+    #[token(r";")]
+    Semicolon,
 
     #[token(r"/")]
     Slash,
+
+    #[token(r"*")]
+    Star,
+
+    #[token(r"}")]
+    RBrace,
+
+    #[token(r")")]
+    RParen,
 
     Invalid,
 

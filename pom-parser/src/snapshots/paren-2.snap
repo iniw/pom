@@ -1,0 +1,51 @@
+---
+source: pom-parser/src/tests.rs
+expression: "lex_and_parse(\"(10);\")"
+---
+(
+    Ast {
+        items: [
+            Id(0),
+        ],
+        stmts: Arena(
+            [
+                Stmt {
+                    kind: Expr(
+                        Id(1),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 5,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [
+                Expr {
+                    kind: Number(
+                        Int(
+                            10,
+                        ),
+                    ),
+                    span: Span {
+                        start: 1,
+                        end: 3,
+                    },
+                },
+                Expr {
+                    kind: Paren(
+                        Some(
+                            Id(0),
+                        ),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 4,
+                    },
+                },
+            ],
+        ),
+    },
+    [],
+)
