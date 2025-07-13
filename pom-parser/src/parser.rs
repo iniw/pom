@@ -60,7 +60,7 @@ impl<'src> Parser<'src> {
         }
     }
 
-    fn parse_statement(&mut self) -> ErrorOr<Stmt> {
+    fn parse_statement(&mut self) -> ErrorOr<Id<Stmt>> {
         let cp = self.checkpoint();
 
         let expr = self.parse_expression()?;
@@ -71,11 +71,11 @@ impl<'src> Parser<'src> {
         }))
     }
 
-    fn parse_expression(&mut self) -> ErrorOr<Expr> {
+    fn parse_expression(&mut self) -> ErrorOr<Id<Expr>> {
         self.parse_precedence0()
     }
 
-    fn parse_precedence0(&mut self) -> ErrorOr<Expr> {
+    fn parse_precedence0(&mut self) -> ErrorOr<Id<Expr>> {
         let cp = self.checkpoint();
 
         let mut lhs = self.parse_precedence1()?;
@@ -86,7 +86,7 @@ impl<'src> Parser<'src> {
             let op = match token.kind {
                 TokenKind::Plus => BinaryOp::Add,
                 TokenKind::Minus => BinaryOp::Sub,
-                _ => unreachable!("All of the chased tokens should be handled."),
+                _ => unreachable!("The possible patterns are constrained by a previous match."),
             };
 
             lhs = self.ast.exprs.push(Expr {
@@ -98,7 +98,7 @@ impl<'src> Parser<'src> {
         Ok(lhs)
     }
 
-    fn parse_precedence1(&mut self) -> ErrorOr<Expr> {
+    fn parse_precedence1(&mut self) -> ErrorOr<Id<Expr>> {
         let cp = self.checkpoint();
 
         let mut lhs = self.parse_precedence2()?;
@@ -109,7 +109,7 @@ impl<'src> Parser<'src> {
             let op = match token.kind {
                 TokenKind::Star => BinaryOp::Mul,
                 TokenKind::Slash => BinaryOp::Div,
-                _ => unreachable!("All of the chased tokens should be handled."),
+                _ => unreachable!("The possible patterns are constrained by a previous match."),
             };
 
             lhs = self.ast.exprs.push(Expr {
@@ -121,7 +121,7 @@ impl<'src> Parser<'src> {
         Ok(lhs)
     }
 
-    fn parse_precedence2(&mut self) -> ErrorOr<Expr> {
+    fn parse_precedence2(&mut self) -> ErrorOr<Id<Expr>> {
         let cp = self.checkpoint();
 
         let token = match chase!(self, TokenKind::Int | TokenKind::Float | TokenKind::Bool(_)) {
@@ -159,7 +159,7 @@ impl<'src> Parser<'src> {
                 kind: ExprKind::Bool(bool),
                 span: token.span,
             })),
-            _ => unreachable!("All of the chased tokens should be handled."),
+            _ => unreachable!("The possible patterns are constrained by a previous match."),
         }
     }
 
@@ -179,7 +179,7 @@ impl<'src> Parser<'src> {
     }
 }
 
-type ErrorOr<T> = Result<Id<T>, Error>;
+type ErrorOr<T> = Result<T, Error>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
