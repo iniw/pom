@@ -27,7 +27,7 @@ expression: "lex_and_parse(\"{;}\")"
     [
         Error {
             kind: UnexpectedToken {
-                expected: [
+                wanted: [
                     Bool,
                     Float,
                     Ident,

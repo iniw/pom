@@ -1,6 +1,6 @@
 ---
 source: pom-parser/src/tests.rs
-expression: "lex_and_parse(\"var: u32 = 47;\")"
+expression: "lex_and_parse(\"var: u32;\")"
 ---
 (
     Ast {
@@ -15,13 +15,11 @@ expression: "lex_and_parse(\"var: u32 = 47;\")"
                         kind: Some(
                             Id(1),
                         ),
-                        rhs: Some(
-                            Id(2),
-                        ),
+                        rhs: None,
                     },
                     span: Span {
                         start: 0,
-                        end: 14,
+                        end: 9,
                     },
                 },
             ],
@@ -40,17 +38,6 @@ expression: "lex_and_parse(\"var: u32 = 47;\")"
                     span: Span {
                         start: 5,
                         end: 8,
-                    },
-                },
-                Expr {
-                    kind: Number(
-                        Int(
-                            47,
-                        ),
-                    ),
-                    span: Span {
-                        start: 11,
-                        end: 13,
                     },
                 },
             ],

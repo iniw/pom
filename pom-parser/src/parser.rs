@@ -1,4 +1,10 @@
-use pom_lexer::{Tokens, token::TokenKind};
+use pom_lexer::{
+    Tokens,
+    token::{
+        Token,
+        TokenKind::{self, *},
+    },
+};
 use pom_utils::{
     arena::{Arena, Id},
     span::Span,
@@ -6,7 +12,6 @@ use pom_utils::{
 
 use crate::{
     Ast, Errors,
-    chase::{ChaseResult::*, chase},
     error::{Error, ErrorKind},
     expr::{BinaryOp, Expr, ExprKind, Number},
     stmt::{Stmt, StmtKind},
@@ -43,14 +48,14 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_program(&mut self) {
-        while let Missing(_) = chase!(self, TokenKind::Eof) {
+        while self.grab(Eof).is_err() {
             match self.parse_stmt() {
                 Ok(stmt) => {
                     self.ast.items.push(stmt);
                 }
                 Err(err) => {
                     self.errors.push(err);
-                    self.skip_to_next_statement();
+                    self.chase(Semicolon);
                 }
             }
         }
@@ -59,15 +64,15 @@ impl<'src> Parser<'src> {
     fn parse_stmt(&mut self) -> ErrorOr<Id<Stmt>> {
         let cp = self.checkpoint();
 
-        match chase!(self, TokenKind::LBrace) {
-            Caught(_) => {
+        match self.grab(LBrace) {
+            Ok(_) => {
                 let mut stmts = Vec::new();
 
-                while let Missing(token) = chase!(self, TokenKind::RBrace) {
-                    if token.kind == TokenKind::Eof {
+                while let Err(token) = self.grab(RBrace) {
+                    if token.kind == Eof {
                         return Err(Error {
                             kind: ErrorKind::UnbalancedBlock,
-                            span: self.span(cp),
+                            span: self.spanned_since(cp),
                         });
                     }
 
@@ -75,82 +80,86 @@ impl<'src> Parser<'src> {
                         Ok(stmt) => stmts.push(stmt),
                         Err(err) => {
                             self.errors.push(err);
-                            self.skip_to_next_statement();
+                            self.chase(Semicolon);
                         }
                     }
                 }
 
                 Ok(self.ast.stmts.push(Stmt {
                     kind: StmtKind::Block(stmts),
-                    span: self.span(cp),
+                    span: self.spanned_since(cp),
                 }))
             }
-            Missing(_) => self.parse_expr_or_decl(),
+            Err(_) => self.parse_expr_or_bind(),
         }
     }
 
-    fn parse_expr_or_decl(&mut self) -> ErrorOr<Id<Stmt>> {
+    fn parse_expr_or_bind(&mut self) -> ErrorOr<Id<Stmt>> {
         let cp = self.checkpoint();
 
         let expr = self.parse_expr()?;
 
-        let stmt = match chase!(self, TokenKind::Colon) {
-            Caught(_) => {
-                // We're in a declaration, the expr we just parsed becomes the lhs.
+        let stmt = match self.grab(Colon) {
+            Ok(_) => {
+                // We're in a binding, the expr we just parsed becomes the lhs.
                 let lhs = expr;
 
-                match chase!(self, TokenKind::Equal) {
-                    Caught(_) => {
+                match self.grab(Equal) {
+                    Ok(_) => {
                         let rhs = self.parse_expr()?;
 
-                        StmtKind::Decl {
+                        StmtKind::Bind {
                             lhs,
                             kind: None,
-                            rhs,
+                            rhs: Some(rhs),
                         }
                     }
-                    Missing(_) => {
+                    Err(_) => {
                         let kind = self.parse_expr()?;
 
-                        match chase!(self, TokenKind::Equal) {
-                            Caught(_) => {
+                        match self.grab(Equal) {
+                            Ok(_) => {
                                 let rhs = self.parse_expr()?;
 
-                                StmtKind::Decl {
+                                StmtKind::Bind {
                                     lhs,
                                     kind: Some(kind),
-                                    rhs,
+                                    rhs: Some(rhs),
                                 }
                             }
-                            Missing(token) => {
+                            // Finding a semicolon after successfully parsing the kind indicates an uninitialized binding, that is, a binding with no rhs.
+                            Err(token) if token.kind == Semicolon => StmtKind::Bind {
+                                lhs,
+                                kind: Some(kind),
+                                rhs: None,
+                            },
+                            Err(token) => {
                                 return Err(Error {
                                     kind: ErrorKind::UnexpectedToken {
-                                        expected: &[TokenKind::Equal],
+                                        wanted: &[Equal, Semicolon],
                                         got: token,
                                     },
-                                    span: self.span(cp),
+                                    span: self.spanned_since(cp),
                                 });
                             }
                         }
                     }
                 }
             }
-            Missing(_) => StmtKind::Expr(expr),
+            Err(_) => StmtKind::Expr(expr),
         };
 
-        if let Missing(token) = chase!(self, TokenKind::Semicolon) {
-            return Err(Error {
-                kind: ErrorKind::UnexpectedToken {
-                    expected: &[TokenKind::Semicolon],
-                    got: token,
-                },
-                span: self.span(cp),
-            });
-        }
+        self.grab(Semicolon).map_err(|token| Error {
+            kind: ErrorKind::UnexpectedToken {
+                wanted: &[Semicolon],
+                got: token,
+            },
+            span: self.spanned_since(cp),
+        })?;
 
         Ok(self.ast.stmts.push(Stmt {
             kind: stmt,
-            span: self.span(cp),
+            span: self.spanned_since(cp),
         }))
     }
 
@@ -163,18 +172,18 @@ impl<'src> Parser<'src> {
 
         let mut lhs = self.parse_expr_precedence1()?;
 
-        while let Caught(token) = chase!(self, TokenKind::Plus | TokenKind::Minus) {
+        while let Ok(token) = self.grab_any(&[Plus, Minus]) {
             let rhs = self.parse_expr_precedence1()?;
 
             let op = match token.kind {
-                TokenKind::Plus => BinaryOp::Add,
-                TokenKind::Minus => BinaryOp::Sub,
+                Plus => BinaryOp::Add,
+                Minus => BinaryOp::Sub,
                 _ => unreachable!("The possible patterns are constrained by a previous match."),
             };
 
             lhs = self.ast.exprs.push(Expr {
                 kind: ExprKind::Binary { lhs, op, rhs },
-                span: self.span(cp),
+                span: self.spanned_since(cp),
             });
         }
 
@@ -186,18 +195,18 @@ impl<'src> Parser<'src> {
 
         let mut lhs = self.parse_expr_precedence2()?;
 
-        while let Caught(token) = chase!(self, TokenKind::Star | TokenKind::Slash) {
+        while let Ok(token) = self.grab_any(&[Star, Slash]) {
             let rhs = self.parse_expr_precedence2()?;
 
             let op = match token.kind {
-                TokenKind::Star => BinaryOp::Mul,
-                TokenKind::Slash => BinaryOp::Div,
+                Star => BinaryOp::Mul,
+                Slash => BinaryOp::Div,
                 _ => unreachable!("The possible patterns are constrained by a previous match."),
             };
 
             lhs = self.ast.exprs.push(Expr {
                 kind: ExprKind::Binary { lhs, op, rhs },
-                span: self.span(cp),
+                span: self.spanned_since(cp),
             });
         }
 
@@ -207,95 +216,73 @@ impl<'src> Parser<'src> {
     fn parse_expr_precedence2(&mut self) -> ErrorOr<Id<Expr>> {
         let cp = self.checkpoint();
 
-        let token = match chase!(
-            self,
-            TokenKind::Bool
-                | TokenKind::Float
-                | TokenKind::Ident
-                | TokenKind::Int
-                | TokenKind::LParen
-        ) {
-            Caught(token) => token,
-            Missing(token) => {
-                return Err(Error {
-                    kind: ErrorKind::UnexpectedToken {
-                        expected: &[
-                            TokenKind::Bool,
-                            TokenKind::Float,
-                            TokenKind::Ident,
-                            TokenKind::Int,
-                            TokenKind::LParen,
-                        ],
-                        got: token,
-                    },
-                    span: self.span(cp),
-                });
-            }
-        };
+        const WANTED: &[TokenKind] = &[Bool, Float, Ident, Int, LParen];
+
+        let token = self.grab_any(WANTED).map_err(|token| Error {
+            kind: ErrorKind::UnexpectedToken {
+                wanted: WANTED,
+                got: token,
+            },
+            span: self.spanned_since(cp),
+        })?;
 
         match token.kind {
-            TokenKind::Bool => match token.span.text(self.src) {
+            Bool => match token.span.text(self.src) {
                 "true" => Ok(self.ast.exprs.push(Expr {
                     kind: ExprKind::Bool(true),
-                    span: self.span(cp),
+                    span: self.spanned_since(cp),
                 })),
                 "false" => Ok(self.ast.exprs.push(Expr {
                     kind: ExprKind::Bool(false),
-                    span: self.span(cp),
+                    span: self.spanned_since(cp),
                 })),
                 _ => unreachable!(
                     "The lexer should never produce `Bool` for anything other than 'true' or 'false'"
                 ),
             },
-            TokenKind::Float => match token.span.text(self.src).parse() {
+            Float => match token.span.text(self.src).parse() {
                 Ok(float) => Ok(self.ast.exprs.push(Expr {
                     kind: ExprKind::Number(Number::Float(float)),
-                    span: self.span(cp),
+                    span: self.spanned_since(cp),
                 })),
                 Err(err) => Err(Error {
                     kind: ErrorKind::InvalidFloatLiteral(err),
-                    span: self.span(cp),
+                    span: self.spanned_since(cp),
                 }),
             },
-            TokenKind::Ident => Ok(self.ast.exprs.push(Expr {
+            Ident => Ok(self.ast.exprs.push(Expr {
                 kind: ExprKind::Ident,
-                span: self.span(cp),
+                span: self.spanned_since(cp),
             })),
-            TokenKind::Int => match token.span.text(self.src).parse() {
+            Int => match token.span.text(self.src).parse() {
                 Ok(int) => Ok(self.ast.exprs.push(Expr {
                     kind: ExprKind::Number(Number::Int(int)),
-                    span: self.span(cp),
+                    span: self.spanned_since(cp),
                 })),
                 Err(err) => Err(Error {
                     kind: ErrorKind::InvalidIntLiteral(err),
-                    span: self.span(cp),
+                    span: self.spanned_since(cp),
                 }),
             },
-            TokenKind::LParen => match chase!(self, TokenKind::RParen) {
-                Caught(_) => Ok(self.ast.exprs.push(Expr {
+            LParen => match self.grab(RParen) {
+                Ok(_) => Ok(self.ast.exprs.push(Expr {
                     kind: ExprKind::Paren(None),
-                    span: self.span(cp),
+                    span: self.spanned_since(cp),
                 })),
-                Missing(_) => {
+                Err(_) => {
                     let expr = self.parse_expr()?;
 
-                    if let Missing(token) = chase!(self, TokenKind::RParen) {
-                        self.errors.push(Error {
-                            kind: ErrorKind::UnexpectedToken {
-                                expected: &[TokenKind::RParen],
-                                got: token,
-                            },
-                            span: self.span(cp),
-                        });
-                        return Err(Error {
-                            kind: ErrorKind::UnbalancedParen,
-                            span: self.span(cp),
-                        });
-                    }
+                    self.grab(RParen).map_err(|token| Error {
+                        kind: ErrorKind::UnexpectedToken {
+                            wanted: &[RParen],
+                            got: token,
+                        },
+                        span: self.spanned_since(cp),
+                    })?;
 
                     Ok(self.ast.exprs.push(Expr {
                         kind: ExprKind::Paren(Some(expr)),
-                        span: self.span(cp),
+                        span: self.spanned_since(cp),
                     }))
                 }
             },
@@ -303,12 +290,40 @@ impl<'src> Parser<'src> {
         }
     }
 
-    fn skip_to_next_statement(&mut self) {
-        while let Missing(token) = chase!(self, TokenKind::Semicolon) {
-            if token.kind == TokenKind::Eof {
-                return;
-            }
+    fn grab(&mut self, wanted: TokenKind) -> Result<Token, Token> {
+        self.grab_with(|token| token == wanted)
+    }
+
+    fn grab_any(&mut self, wanted_list: &[TokenKind]) -> Result<Token, Token> {
+        self.grab_with(|token| wanted_list.contains(&token))
+    }
+
+    fn grab_with(&mut self, f: impl FnOnce(TokenKind) -> bool) -> Result<Token, Token> {
+        let token = self.tokens[self.cursor];
+        if f(token.kind) {
             self.cursor += 1;
+            Ok(token)
+        } else {
+            Err(token)
+        }
+    }
+
+    fn chase(&mut self, wanted: TokenKind) -> Option<Token> {
+        self.chase_with(|token| token == wanted)
+    }
+
+    #[expect(dead_code)]
+    fn chase_any(&mut self, wanted_list: &[TokenKind]) -> Option<Token> {
+        self.chase_with(|token| wanted_list.contains(&token))
+    }
+
+    fn chase_with(&mut self, f: impl Fn(TokenKind) -> bool) -> Option<Token> {
+        loop {
+            match self.grab_with(&f) {
+                Ok(token) => return Some(token),
+                Err(token) if token.kind == Eof => return None,
+                _ => self.cursor += 1,
+            }
         }
     }
 
@@ -316,7 +331,7 @@ impl<'src> Parser<'src> {
         self.cursor
     }
 
-    fn span(&self, checkpoint: usize) -> Span {
+    fn spanned_since(&self, checkpoint: usize) -> Span {
         let previous = self.cursor.saturating_sub(1);
         Span {
             start: self.tokens[usize::min(checkpoint, previous)].span.start,
