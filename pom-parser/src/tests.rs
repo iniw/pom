@@ -49,7 +49,6 @@ fn invalid_block_stmt() {
 fn paren() {
     snap!(lex_and_parse("(55 + 47);"));
     snap!(lex_and_parse("(10);"));
-    snap!(lex_and_parse("(;);"));
     snap!(lex_and_parse("();"));
 }
 
@@ -58,6 +57,7 @@ fn invalid_paren() {
     snap!(lex_and_parse("(55 + 47;;"));
     snap!(lex_and_parse("(55 + 47;"));
     snap!(lex_and_parse("(55 + 47"));
+    snap!(lex_and_parse("(;);"));
     snap!(lex_and_parse("(;"));
     snap!(lex_and_parse("("));
 }
