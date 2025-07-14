@@ -2,13 +2,13 @@ use pom_utils::{arena::Id, span::Span};
 
 use crate::expr::Expr;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Stmt {
     pub kind: StmtKind,
     pub span: Span,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum StmtKind {
     Bind {
         lhs: Id<Expr>,

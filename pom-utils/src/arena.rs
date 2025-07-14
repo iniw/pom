@@ -92,7 +92,6 @@ macro_rules! arena {
 
 #[must_use = "Ids cannot be created manually and so should not be ignored when given to you."]
 #[repr(transparent)]
-#[derive(PartialEq, Eq)]
 pub struct Id<T>(u32, std::marker::PhantomData<T>);
 
 impl<T> Id<T> {
@@ -101,6 +100,15 @@ impl<T> Id<T> {
         Self(idx, std::marker::PhantomData)
     }
 }
+
+impl<T> PartialEq for Id<T> {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<T> Eq for Id<T> {}
 
 impl<T> Clone for Id<T> {
     #[inline(always)]
