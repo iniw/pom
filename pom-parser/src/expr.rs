@@ -21,8 +21,6 @@ pub enum ExprKind {
     Ident,
 
     Paren(Option<Id<Expr>>),
-
-    Invalid,
 }
 
 #[derive(Debug, PartialEq)]

@@ -19,6 +19,4 @@ pub enum StmtKind {
     Block(Vec<Id<Stmt>>),
 
     Expr(Id<Expr>),
-
-    Invalid,
 }
