@@ -25,6 +25,7 @@ fn bind() {
     snap!(lex_and_parse("55 := 47;"));
     snap!(lex_and_parse("var: u32 = 47;"));
     snap!(lex_and_parse("var: 55 = 47;"));
+    snap!(lex_and_parse("var: u32;"));
 }
 
 #[test]
@@ -36,7 +37,7 @@ fn block_stmt() {
 }
 
 #[test]
-fn unbalanced_block_stmt() {
+fn invalid_block_stmt() {
     snap!(lex_and_parse("{55 + 47;;"));
     snap!(lex_and_parse("{55 + 47;"));
     snap!(lex_and_parse("{55 + 47"));
@@ -53,7 +54,7 @@ fn paren() {
 }
 
 #[test]
-fn unbalanced_paren() {
+fn invalid_paren() {
     snap!(lex_and_parse("(55 + 47;;"));
     snap!(lex_and_parse("(55 + 47;"));
     snap!(lex_and_parse("(55 + 47"));

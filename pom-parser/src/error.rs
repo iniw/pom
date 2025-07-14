@@ -14,10 +14,9 @@ pub enum ErrorKind {
     InvalidFloatLiteral(ParseFloatError),
 
     UnbalancedBlock,
-    UnbalancedParen,
 
     UnexpectedToken {
-        expected: &'static [TokenKind],
+        wanted: &'static [TokenKind],
         got: Token,
     },
 }

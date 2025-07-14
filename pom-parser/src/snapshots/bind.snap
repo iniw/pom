@@ -10,10 +10,12 @@ expression: "lex_and_parse(\"var := 55;\")"
         stmts: Arena(
             [
                 Stmt {
-                    kind: Decl {
+                    kind: Bind {
                         lhs: Id(0),
                         kind: None,
-                        rhs: Id(1),
+                        rhs: Some(
+                            Id(1),
+                        ),
                     },
                     span: Span {
                         start: 0,
