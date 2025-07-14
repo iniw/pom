@@ -68,7 +68,5 @@ pub enum TokenKind {
     #[token(r")")]
     RParen,
 
-    Invalid,
-
     Eof,
 }

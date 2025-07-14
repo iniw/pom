@@ -30,13 +30,7 @@ impl<'src> Lexer<'src> {
             };
             match token {
                 Ok(token) => self.tokens.push(Token { kind: token, span }),
-                Err(err) => {
-                    self.tokens.push(Token {
-                        kind: TokenKind::Invalid,
-                        span,
-                    });
-                    self.errors.push(Error { kind: err, span });
-                }
+                Err(err) => self.errors.push(Error { kind: err, span }),
             }
         }
 
