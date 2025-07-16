@@ -20,6 +20,7 @@ expression: "lex_and_parse(\"(;);\")"
                     Float,
                     Ident,
                     Int,
+                    LBrace,
                     LParen,
                 ],
                 got: Token {
@@ -42,6 +43,7 @@ expression: "lex_and_parse(\"(;);\")"
                     Float,
                     Ident,
                     Int,
+                    LBrace,
                     LParen,
                 ],
                 got: Token {

@@ -1,29 +1,28 @@
-use pom_lexer::{
+use pom_lexer::token::{
+    Token,
+    TokenKind::{self, *},
     Tokens,
-    token::{
-        Token,
-        TokenKind::{self, *},
-    },
 };
-use pom_utils::{
-    arena::{Arena, Id},
-    span::Span,
-};
+use pom_utils::{arena::Id, span::Span};
 
 use crate::{
-    Ast, Errors,
-    error::{Error, ErrorKind},
-    expr::{BinaryOp, Expr, ExprKind, Number},
-    stmt::{Stmt, StmtKind},
+    Errors,
+    ast::{
+        Ast,
+        expr::{BinaryOp, Expr, ExprKind, Literal},
+        stmt::{BindKind, Stmt, StmtKind},
+    },
+    error::{Error, ErrorKind, ErrorOr},
 };
 
 pub struct Parser<'src> {
     src: &'src str,
     tokens: Tokens,
 
-    cursor: usize,
     ast: Ast,
     errors: Errors,
+
+    cursor: usize,
 }
 
 impl<'src> Parser<'src> {
@@ -32,22 +31,14 @@ impl<'src> Parser<'src> {
             src,
             tokens,
 
-            cursor: 0,
-            ast: Ast {
-                items: Vec::new(),
-                stmts: Arena::new(),
-                exprs: Arena::new(),
-            },
+            ast: Ast::default(),
             errors: Errors::new(),
+
+            cursor: 0,
         }
     }
 
     pub fn parse(mut self) -> (Ast, Errors) {
-        self.parse_program();
-        (self.ast, self.errors)
-    }
-
-    fn parse_program(&mut self) {
         while self.grab(Eof).is_err() {
             match self.parse_stmt() {
                 Ok(stmt) => {
@@ -59,6 +50,7 @@ impl<'src> Parser<'src> {
                 }
             }
         }
+        (self.ast, self.errors)
     }
 
     fn parse_stmt(&mut self) -> ErrorOr<Id<Stmt>> {
@@ -66,25 +58,7 @@ impl<'src> Parser<'src> {
 
         match self.grab(LBrace) {
             Ok(_) => {
-                let mut stmts = Vec::new();
-
-                while let Err(token) = self.grab(RBrace) {
-                    if token.kind == Eof {
-                        return Err(Error {
-                            kind: ErrorKind::UnbalancedBlock,
-                            span: self.spanned_since(cp),
-                        });
-                    }
-
-                    match self.parse_stmt() {
-                        Ok(stmt) => stmts.push(stmt),
-                        Err(err) => {
-                            self.errors.push(err);
-                            self.chase(Semicolon);
-                        }
-                    }
-                }
-
+                let stmts = self.parse_block(cp)?;
                 Ok(self.ast.stmts.push(Stmt {
                     kind: StmtKind::Block(stmts),
                     span: self.spanned_since(cp),
@@ -115,7 +89,16 @@ impl<'src> Parser<'src> {
                         }
                     }
                     Err(_) => {
-                        let kind = self.parse_expr()?;
+                        let kind = match self.grab_any(&[Fn, Type]).map(|token| token.kind) {
+                            Ok(Fn) => BindKind::Fn,
+                            Ok(Type) => BindKind::Type,
+                            Ok(_) => {
+                                unreachable!(
+                                    "The possible patterns are constrained by a previous `grab`."
+                                )
+                            }
+                            Err(_) => BindKind::Expr(self.parse_expr()?),
+                        };
 
                         match self.grab(Equal) {
                             Ok(_) => {
@@ -178,7 +161,7 @@ impl<'src> Parser<'src> {
             let op = match token.kind {
                 Plus => BinaryOp::Add,
                 Minus => BinaryOp::Sub,
-                _ => unreachable!("The possible patterns are constrained by a previous match."),
+                _ => unreachable!("The possible patterns are constrained by a previous `grab`."),
             };
 
             lhs = self.ast.exprs.push(Expr {
@@ -201,7 +184,7 @@ impl<'src> Parser<'src> {
             let op = match token.kind {
                 Star => BinaryOp::Mul,
                 Slash => BinaryOp::Div,
-                _ => unreachable!("The possible patterns are constrained by a previous match."),
+                _ => unreachable!("The possible patterns are constrained by a previous `grab`."),
             };
 
             lhs = self.ast.exprs.push(Expr {
@@ -216,7 +199,7 @@ impl<'src> Parser<'src> {
     fn parse_expr_precedence2(&mut self) -> ErrorOr<Id<Expr>> {
         let cp = self.checkpoint();
 
-        const WANTED: &[TokenKind] = &[Bool, Float, Ident, Int, LParen];
+        const WANTED: &[TokenKind] = &[Bool, Float, Ident, Int, LBrace, LParen];
 
         let token = self.grab_any(WANTED).map_err(|token| Error {
             kind: ErrorKind::UnexpectedToken {
@@ -229,11 +212,11 @@ impl<'src> Parser<'src> {
         match token.kind {
             Bool => match token.span.text(self.src) {
                 "true" => Ok(self.ast.exprs.push(Expr {
-                    kind: ExprKind::Bool(true),
+                    kind: ExprKind::Literal(Literal::Bool(true)),
                     span: self.spanned_since(cp),
                 })),
                 "false" => Ok(self.ast.exprs.push(Expr {
-                    kind: ExprKind::Bool(false),
+                    kind: ExprKind::Literal(Literal::Bool(false)),
                     span: self.spanned_since(cp),
                 })),
                 _ => unreachable!(
@@ -242,7 +225,7 @@ impl<'src> Parser<'src> {
             },
             Float => match token.span.text(self.src).parse() {
                 Ok(float) => Ok(self.ast.exprs.push(Expr {
-                    kind: ExprKind::Number(Number::Float(float)),
+                    kind: ExprKind::Literal(Literal::Float(float)),
                     span: self.spanned_since(cp),
                 })),
                 Err(err) => Err(Error {
@@ -256,7 +239,7 @@ impl<'src> Parser<'src> {
             })),
             Int => match token.span.text(self.src).parse() {
                 Ok(int) => Ok(self.ast.exprs.push(Expr {
-                    kind: ExprKind::Number(Number::Int(int)),
+                    kind: ExprKind::Literal(Literal::Int(int)),
                     span: self.spanned_since(cp),
                 })),
                 Err(err) => Err(Error {
@@ -264,13 +247,22 @@ impl<'src> Parser<'src> {
                     span: self.spanned_since(cp),
                 }),
             },
+            LBrace => {
+                let stmts = self.parse_block(cp)?;
+                Ok(self.ast.exprs.push(Expr {
+                    kind: ExprKind::Block(stmts),
+                    span: self.spanned_since(cp),
+                }))
+            }
             LParen => match self.grab(RParen) {
                 Ok(_) => Ok(self.ast.exprs.push(Expr {
-                    kind: ExprKind::Paren(None),
+                    kind: ExprKind::Tuple(Vec::new()),
                     span: self.spanned_since(cp),
                 })),
                 Err(_) => {
                     let expr = self.parse_expr()?;
+
+                    // TODO: Parse tuples
 
                     self.grab(RParen).map_err(|token| Error {
                         kind: ErrorKind::UnexpectedToken {
@@ -281,13 +273,36 @@ impl<'src> Parser<'src> {
                     })?;
 
                     Ok(self.ast.exprs.push(Expr {
-                        kind: ExprKind::Paren(Some(expr)),
+                        kind: ExprKind::Paren(expr),
                         span: self.spanned_since(cp),
                     }))
                 }
             },
-            _ => unreachable!("The possible patterns are constrained by a previous match."),
+            _ => unreachable!("The possible patterns are constrained by a previous `grab`."),
         }
+    }
+
+    fn parse_block(&mut self, checkpoint: usize) -> ErrorOr<Vec<Id<Stmt>>> {
+        let mut stmts = Vec::new();
+
+        while let Err(token) = self.grab(RBrace) {
+            if token.kind == Eof {
+                return Err(Error {
+                    kind: ErrorKind::UnbalancedBlock,
+                    span: self.spanned_since(checkpoint),
+                });
+            }
+
+            match self.parse_stmt() {
+                Ok(stmt) => stmts.push(stmt),
+                Err(err) => {
+                    self.errors.push(err);
+                    self.chase(Semicolon);
+                }
+            }
+        }
+
+        Ok(stmts)
     }
 
     fn grab(&mut self, wanted: TokenKind) -> Result<Token, Token> {
@@ -317,7 +332,7 @@ impl<'src> Parser<'src> {
         self.chase_with(|token| wanted_list.contains(&token))
     }
 
-    fn chase_with(&mut self, f: impl Fn(TokenKind) -> bool) -> Option<Token> {
+    fn chase_with(&mut self, f: impl std::ops::Fn(TokenKind) -> bool) -> Option<Token> {
         loop {
             match self.grab_with(&f) {
                 Ok(token) => return Some(token),
@@ -339,5 +354,3 @@ impl<'src> Parser<'src> {
         }
     }
 }
-
-type ErrorOr<T> = Result<T, Error>;

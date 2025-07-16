@@ -23,8 +23,8 @@ expression: "lex_and_parse(\"();\")"
         exprs: Arena(
             [
                 Expr {
-                    kind: Paren(
-                        None,
+                    kind: Tuple(
+                        [],
                     ),
                     span: Span {
                         start: 0,

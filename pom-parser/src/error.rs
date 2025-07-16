@@ -20,3 +20,7 @@ pub enum ErrorKind {
         got: Token,
     },
 }
+
+pub type Errors = Vec<Error>;
+
+pub type ErrorOr<T> = Result<T, Error>;

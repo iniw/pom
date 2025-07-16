@@ -3,6 +3,7 @@ use std::{fs, path::PathBuf};
 use clap::{Parser, Subcommand};
 use pom_lexer::lex;
 use pom_parser::parse;
+use pom_sema::analyse;
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
@@ -38,6 +39,12 @@ fn run(src: &str, debug: bool) {
     if debug {
         println!("[PARSER] Ast: {:#?}", ast);
         println!("[PARSER] Errors: {:#?}", errors);
+    }
+
+    let (ir, errors) = analyse(src, ast);
+    if debug {
+        println!("[SEMA] Ir: {:#?}", ir);
+        println!("[SEMA] Errors: {:#?}", errors);
     }
 }
 

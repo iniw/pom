@@ -13,7 +13,9 @@ expression: "lex_and_parse(\"var: u32 = 47;\")"
                     kind: Bind {
                         lhs: Id(0),
                         kind: Some(
-                            Id(1),
+                            Expr(
+                                Id(1),
+                            ),
                         ),
                         rhs: Some(
                             Id(2),
@@ -43,7 +45,7 @@ expression: "lex_and_parse(\"var: u32 = 47;\")"
                     },
                 },
                 Expr {
-                    kind: Number(
+                    kind: Literal(
                         Int(
                             47,
                         ),

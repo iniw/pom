@@ -34,7 +34,7 @@ expression: "lex_and_parse(\"var := 55;\")"
                     },
                 },
                 Expr {
-                    kind: Number(
+                    kind: Literal(
                         Int(
                             55,
                         ),

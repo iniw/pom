@@ -51,11 +51,12 @@
           {
             format = check "format" "cargo fmt --check" [ rustToolchain ];
             lint = check "lint" "cargo clippy -- -Dwarnings" [ rustToolchain ];
+            test = check "test" "cargo insta test" [
+              rustToolchain
+              pkgs.cargo-insta
+            ];
             typos = check "typos" "typos" [ pkgs.typos ];
-          }
-          # Check that every package builds.
-          # `buildRustPackage` also runs tests in the derivation's checkPhase, so this also ensures that all tests pass.
-          // self.packages.${system};
+          };
 
         devShells.default = pkgs.mkShell {
           packages = rustToolchain ++ [
@@ -64,28 +65,20 @@
           ];
         };
 
-        packages =
-          let
-            package =
-              name:
-              pkgs.rustPlatform.buildRustPackage {
-                inherit name;
-                src = self;
+        packages = rec {
+          default = pom;
 
-                cargoLock.lockFile = ./Cargo.lock;
+          pom = pkgs.rustPlatform.buildRustPackage {
+            name = "pom";
+            src = self;
 
-                # Only build and run tests for the specified package.
-                cargoBuildFlags = "--package ${name}";
-                cargoTestFlags = "--package ${name}";
-              };
-          in
-          {
-            # Each crate in the workspace gets a corresponding flake package, this ensures they can all be individually built, tested and published.
-            pom = package "pom";
-            pom-lexer = package "pom-lexer";
-            pom-parser = package "pom-parser";
-            pom-utils = package "pom-utils";
+            cargoLock.lockFile = ./Cargo.lock;
+
+            # Only build and run tests for the specified package.
+            cargoBuildFlags = "--package pom";
+            cargoTestFlags = "--package pom";
           };
+        };
       }
     );
 }

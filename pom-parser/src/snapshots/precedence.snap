@@ -23,7 +23,7 @@ expression: "lex_and_parse(\"(1 + 1) / 2 * 3 + 1;\")"
         exprs: Arena(
             [
                 Expr {
-                    kind: Number(
+                    kind: Literal(
                         Int(
                             1,
                         ),
@@ -34,7 +34,7 @@ expression: "lex_and_parse(\"(1 + 1) / 2 * 3 + 1;\")"
                     },
                 },
                 Expr {
-                    kind: Number(
+                    kind: Literal(
                         Int(
                             1,
                         ),
@@ -57,9 +57,7 @@ expression: "lex_and_parse(\"(1 + 1) / 2 * 3 + 1;\")"
                 },
                 Expr {
                     kind: Paren(
-                        Some(
-                            Id(2),
-                        ),
+                        Id(2),
                     ),
                     span: Span {
                         start: 0,
@@ -67,7 +65,7 @@ expression: "lex_and_parse(\"(1 + 1) / 2 * 3 + 1;\")"
                     },
                 },
                 Expr {
-                    kind: Number(
+                    kind: Literal(
                         Int(
                             2,
                         ),
@@ -89,7 +87,7 @@ expression: "lex_and_parse(\"(1 + 1) / 2 * 3 + 1;\")"
                     },
                 },
                 Expr {
-                    kind: Number(
+                    kind: Literal(
                         Int(
                             3,
                         ),
@@ -111,7 +109,7 @@ expression: "lex_and_parse(\"(1 + 1) / 2 * 3 + 1;\")"
                     },
                 },
                 Expr {
-                    kind: Number(
+                    kind: Literal(
                         Int(
                             1,
                         ),

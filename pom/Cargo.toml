@@ -7,3 +7,4 @@ edition = "2024"
 clap = { version = "4.5.41", features = ["derive"] }
 pom-lexer = { path = "../pom-lexer" }
 pom-parser = { path = "../pom-parser" }
+pom-sema = { path = "../pom-sema" }
