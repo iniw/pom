@@ -44,7 +44,7 @@ expression: "lex_and_parse(\"{55 + 47; 1 * 1;}\")"
         exprs: Arena(
             [
                 Expr {
-                    kind: Number(
+                    kind: Literal(
                         Int(
                             55,
                         ),
@@ -55,7 +55,7 @@ expression: "lex_and_parse(\"{55 + 47; 1 * 1;}\")"
                     },
                 },
                 Expr {
-                    kind: Number(
+                    kind: Literal(
                         Int(
                             47,
                         ),
@@ -77,7 +77,7 @@ expression: "lex_and_parse(\"{55 + 47; 1 * 1;}\")"
                     },
                 },
                 Expr {
-                    kind: Number(
+                    kind: Literal(
                         Int(
                             1,
                         ),
@@ -88,7 +88,7 @@ expression: "lex_and_parse(\"{55 + 47; 1 * 1;}\")"
                     },
                 },
                 Expr {
-                    kind: Number(
+                    kind: Literal(
                         Int(
                             1,
                         ),

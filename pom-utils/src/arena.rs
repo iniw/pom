@@ -3,7 +3,7 @@ use std::{
     slice::Iter,
 };
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Arena<T>(Vec<T>);
 
 impl<T> Arena<T> {
@@ -25,6 +25,12 @@ impl<T> Arena<T> {
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+}
+
+impl<T> Default for Arena<T> {
+    fn default() -> Self {
+        Self(Vec::default())
     }
 }
 

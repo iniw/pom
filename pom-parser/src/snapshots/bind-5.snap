@@ -13,7 +13,9 @@ expression: "lex_and_parse(\"var: u32;\")"
                     kind: Bind {
                         lhs: Id(0),
                         kind: Some(
-                            Id(1),
+                            Expr(
+                                Id(1),
+                            ),
                         ),
                         rhs: None,
                     },

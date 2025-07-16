@@ -6,10 +6,11 @@ pub struct Error {
     pub span: Span,
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorKind {
-    #[default]
-    UnknownToken,
+    UnknownSymbol,
 }
 
 pub type Errors = Vec<Error>;
+
+pub type ErrorOr<T> = Result<T, Error>;

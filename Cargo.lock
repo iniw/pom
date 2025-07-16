@@ -216,6 +216,7 @@ dependencies = [
  "clap",
  "pom-lexer",
  "pom-parser",
+ "pom-sema",
 ]
 
 [[package]]
@@ -231,6 +232,14 @@ name = "pom-parser"
 version = "0.1.0"
 dependencies = [
  "pom-lexer",
+ "pom-utils",
+]
+
+[[package]]
+name = "pom-sema"
+version = "0.1.0"
+dependencies = [
+ "pom-parser",
  "pom-utils",
 ]
 

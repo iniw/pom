@@ -1,5 +1,7 @@
 use pom_utils::{arena::Id, span::Span};
 
+use crate::ast::stmt::Stmt;
+
 #[derive(Debug, PartialEq)]
 pub struct Expr {
     pub kind: ExprKind,
@@ -14,16 +16,18 @@ pub enum ExprKind {
         rhs: Id<Expr>,
     },
 
-    Bool(bool),
-
-    Number(Number),
+    Block(Vec<Id<Stmt>>),
 
     Ident,
 
-    Paren(Option<Id<Expr>>),
+    Literal(Literal),
+
+    Paren(Id<Expr>),
+
+    Tuple(Vec<Id<Expr>>),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BinaryOp {
     Add,
     Sub,
@@ -31,8 +35,9 @@ pub enum BinaryOp {
     Div,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum Number {
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Literal {
+    Bool(bool),
     Int(i64),
     Float(f64),
 }

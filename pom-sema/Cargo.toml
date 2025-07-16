@@ -1,0 +1,8 @@
+[package]
+name = "pom-sema"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+pom-parser = { path = "../pom-parser" }
+pom-utils = { path = "../pom-utils" }

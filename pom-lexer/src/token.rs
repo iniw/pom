@@ -29,11 +29,17 @@ pub enum TokenKind {
     #[token(r":")]
     Colon,
 
+    #[token(r",")]
+    Comma,
+
     #[token(r"=")]
     Equal,
 
     #[regex(r"[-+]?[0-9]+\.[0-9]+")]
     Float,
+
+    #[token(r"fn")]
+    Fn,
 
     #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*")]
     Ident,
@@ -53,6 +59,12 @@ pub enum TokenKind {
     #[token(r"+")]
     Plus,
 
+    #[token(r"}")]
+    RBrace,
+
+    #[token(r")")]
+    RParen,
+
     #[token(r";")]
     Semicolon,
 
@@ -62,11 +74,10 @@ pub enum TokenKind {
     #[token(r"*")]
     Star,
 
-    #[token(r"}")]
-    RBrace,
-
-    #[token(r")")]
-    RParen,
+    #[token(r"type")]
+    Type,
 
     Eof,
 }
+
+pub type Tokens = Vec<Token>;

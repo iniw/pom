@@ -23,7 +23,7 @@ expression: "lex_and_parse(\"(10);\")"
         exprs: Arena(
             [
                 Expr {
-                    kind: Number(
+                    kind: Literal(
                         Int(
                             10,
                         ),
@@ -35,9 +35,7 @@ expression: "lex_and_parse(\"(10);\")"
                 },
                 Expr {
                     kind: Paren(
-                        Some(
-                            Id(0),
-                        ),
+                        Id(0),
                     ),
                     span: Span {
                         start: 0,

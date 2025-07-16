@@ -1,4 +1,4 @@
-use crate::{error::Error, lexer::Lexer, token::Token};
+use crate::{error::Errors, lexer::Lexer, token::Tokens};
 
 pub mod error;
 pub mod token;
@@ -10,6 +10,3 @@ mod tests;
 pub fn lex(src: &str) -> (Tokens, Errors) {
     Lexer::new(src).lex()
 }
-
-pub type Tokens = Vec<Token>;
-pub type Errors = Vec<Error>;
