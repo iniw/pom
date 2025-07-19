@@ -10,20 +10,24 @@ pub struct Stmt {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum StmtKind {
-    Bind {
-        lhs: Id<Expr>,
-        kind: Option<BindKind>,
-        rhs: Option<Id<Expr>>,
-    },
+    Bind(Bind),
 
     Block(Vec<Id<Stmt>>),
 
     Expr(Id<Expr>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Bind {
+    pub lhs: Id<Expr>,
+    pub kind: BindKind,
+    pub rhs: Option<Id<Expr>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BindKind {
     Expr(Id<Expr>),
-    Fn,
+    Fn { params: Vec<Bind> },
+    Infer,
     Type,
 }

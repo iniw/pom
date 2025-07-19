@@ -4,37 +4,61 @@ expression: "lex_and_parse(\";\")"
 ---
 (
     Ast {
-        items: [],
+        items: [
+            Id<Stmt>(0),
+        ],
         stmts: Arena(
-            [],
-        ),
-        exprs: Arena(
-            [],
-        ),
-    },
-    [
-        Error {
-            kind: UnexpectedToken {
-                wanted: [
-                    Bool,
-                    Float,
-                    Ident,
-                    Int,
-                    LBrace,
-                    LParen,
-                ],
-                got: Token {
-                    kind: Semicolon,
+            [
+                Stmt {
+                    kind: Expr(
+                        Id<Expr>(0),
+                    ),
                     span: Span {
                         start: 0,
                         end: 1,
                     },
                 },
+            ],
+        ),
+        exprs: Arena(
+            [
+                Expr {
+                    kind: Invalid(
+                        Id<Error>(0),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 1,
+                    },
+                },
+            ],
+        ),
+    },
+    Arena(
+        [
+            Error {
+                kind: UnexpectedToken {
+                    wanted: [
+                        Bool,
+                        Float,
+                        Ident,
+                        Int,
+                        LBrace,
+                        LParen,
+                    ],
+                    got: Token {
+                        kind: Semicolon,
+                        span: Span {
+                            start: 0,
+                            end: 1,
+                        },
+                    },
+                },
+                span: Span {
+                    start: 0,
+                    end: 1,
+                },
             },
-            span: Span {
-                start: 0,
-                end: 1,
-            },
-        },
-    ],
+        ],
+    ),
 )

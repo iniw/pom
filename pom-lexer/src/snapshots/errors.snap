@@ -12,6 +12,24 @@ expression: "lex(\"55 ^ $ 47\")"
             },
         },
         Token {
+            kind: Invalid(
+                Id<Error>(0),
+            ),
+            span: Span {
+                start: 3,
+                end: 4,
+            },
+        },
+        Token {
+            kind: Invalid(
+                Id<Error>(1),
+            ),
+            span: Span {
+                start: 5,
+                end: 6,
+            },
+        },
+        Token {
             kind: Int,
             span: Span {
                 start: 7,
@@ -26,20 +44,22 @@ expression: "lex(\"55 ^ $ 47\")"
             },
         },
     ],
-    [
-        Error {
-            kind: UnknownToken,
-            span: Span {
-                start: 3,
-                end: 4,
+    Arena(
+        [
+            Error {
+                kind: UnknownToken,
+                span: Span {
+                    start: 3,
+                    end: 4,
+                },
             },
-        },
-        Error {
-            kind: UnknownToken,
-            span: Span {
-                start: 5,
-                end: 6,
+            Error {
+                kind: UnknownToken,
+                span: Span {
+                    start: 5,
+                    end: 6,
+                },
             },
-        },
-    ],
+        ],
+    ),
 )

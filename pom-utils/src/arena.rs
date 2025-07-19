@@ -23,6 +23,11 @@ impl<T> Arena<T> {
     }
 
     #[inline]
+    pub fn next_id(&self) -> Id<T> {
+        Id::new(self.0.len() as u32)
+    }
+
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -127,7 +132,7 @@ impl<T> Copy for Id<T> {}
 
 impl<T> std::fmt::Debug for Id<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Id({})", self.0)
+        write!(f, "Id<{}>({})", tynm::type_name::<T>(), self.0)
     }
 }
 

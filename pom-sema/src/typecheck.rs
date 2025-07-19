@@ -8,7 +8,5 @@ impl TypeChecking {
         Self {}
     }
 
-    pub fn check(self, _ir: &mut Ir) {
-        todo!()
-    }
+    pub fn check(self, _ir: &mut Ir) {}
 }

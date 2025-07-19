@@ -1,0 +1,154 @@
+---
+source: pom-sema/src/lowering/tests.rs
+expression: "lex_parse_and_lower(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\"#)"
+---
+(
+    Ir {
+        items: [
+            Id<Stmt>(1),
+        ],
+        stmts: Arena(
+            [
+                Stmt {
+                    kind: Bind(
+                        Bind {
+                            lhs: Id<Expr>(5),
+                            sym: Id<Sym>(2),
+                            rhs: Some(
+                                Id<Expr>(4),
+                            ),
+                        },
+                    ),
+                    span: Span {
+                        start: 24,
+                        end: 35,
+                    },
+                },
+                Stmt {
+                    kind: Bind(
+                        Bind {
+                            lhs: Id<Expr>(7),
+                            sym: Id<Sym>(3),
+                            rhs: Some(
+                                Id<Expr>(6),
+                            ),
+                        },
+                    ),
+                    span: Span {
+                        start: 1,
+                        end: 38,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [
+                Expr {
+                    kind: Ident(
+                        Id<Sym>(0),
+                    ),
+                    span: Span {
+                        start: 11,
+                        end: 14,
+                    },
+                },
+                Expr {
+                    kind: Ident(
+                        Id<Sym>(1),
+                    ),
+                    span: Span {
+                        start: 8,
+                        end: 9,
+                    },
+                },
+                Expr {
+                    kind: Ident(
+                        Id<Sym>(1),
+                    ),
+                    span: Span {
+                        start: 29,
+                        end: 30,
+                    },
+                },
+                Expr {
+                    kind: Ident(
+                        Id<Sym>(1),
+                    ),
+                    span: Span {
+                        start: 33,
+                        end: 34,
+                    },
+                },
+                Expr {
+                    kind: Binary {
+                        lhs: Id<Expr>(2),
+                        op: Add,
+                        rhs: Id<Expr>(3),
+                    },
+                    span: Span {
+                        start: 29,
+                        end: 34,
+                    },
+                },
+                Expr {
+                    kind: Ident(
+                        Id<Sym>(2),
+                    ),
+                    span: Span {
+                        start: 24,
+                        end: 25,
+                    },
+                },
+                Expr {
+                    kind: Block(
+                        [
+                            Id<Stmt>(0),
+                        ],
+                    ),
+                    span: Span {
+                        start: 18,
+                        end: 37,
+                    },
+                },
+                Expr {
+                    kind: Ident(
+                        Id<Sym>(3),
+                    ),
+                    span: Span {
+                        start: 1,
+                        end: 2,
+                    },
+                },
+            ],
+        ),
+        symbols: Arena(
+            [
+                Sym {
+                    kind: Type,
+                },
+                Sym {
+                    kind: Expr(
+                        Id<Expr>(0),
+                    ),
+                },
+                Sym {
+                    kind: Infer,
+                },
+                Sym {
+                    kind: Fn {
+                        params: [
+                            Bind {
+                                lhs: Id<Expr>(1),
+                                sym: Id<Sym>(1),
+                                rhs: None,
+                            },
+                        ],
+                    },
+                },
+            ],
+        ),
+    },
+    Arena(
+        [],
+    ),
+)

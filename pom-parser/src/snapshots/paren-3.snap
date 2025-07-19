@@ -5,13 +5,13 @@ expression: "lex_and_parse(\"();\")"
 (
     Ast {
         items: [
-            Id(0),
+            Id<Stmt>(0),
         ],
         stmts: Arena(
             [
                 Stmt {
                     kind: Expr(
-                        Id(0),
+                        Id<Expr>(0),
                     ),
                     span: Span {
                         start: 0,
@@ -34,5 +34,7 @@ expression: "lex_and_parse(\"();\")"
             ],
         ),
     },
-    [],
+    Arena(
+        [],
+    ),
 )

@@ -26,7 +26,7 @@
       {
         checks =
           let
-            check =
+            cargoCheck =
               name: command: inputs:
               pkgs.stdenv.mkDerivation {
                 inherit name;
@@ -47,15 +47,27 @@
                   mkdir "$out"
                 '';
               };
+
+            simpleCheck =
+              name: command: inputs:
+              pkgs.stdenv.mkDerivation {
+                inherit name;
+                src = self;
+                nativeBuildInputs = inputs;
+                buildPhase = ''
+                  ${command}
+                  mkdir "$out"
+                '';
+              };
           in
           {
-            format = check "format" "cargo fmt --check" [ rustToolchain ];
-            lint = check "lint" "cargo clippy -- -Dwarnings" [ rustToolchain ];
-            test = check "test" "cargo insta test" [
+            format = cargoCheck "format" "cargo fmt --check" [ rustToolchain ];
+            lint = cargoCheck "lint" "cargo clippy -- -Dwarnings" [ rustToolchain ];
+            test = cargoCheck "test" "cargo insta test" [
               rustToolchain
               pkgs.cargo-insta
             ];
-            typos = check "typos" "typos" [ pkgs.typos ];
+            typos = simpleCheck "typos" "typos" [ pkgs.typos ];
           };
 
         devShells.default = pkgs.mkShell {

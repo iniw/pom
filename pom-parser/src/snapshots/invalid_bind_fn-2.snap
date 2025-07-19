@@ -1,0 +1,90 @@
+---
+source: pom-parser/src/tests.rs
+expression: "test(\"f: fn (a := 55;\")"
+---
+(
+    Ast {
+        items: [
+            Id<Stmt>(0),
+        ],
+        stmts: Arena(
+            [
+                Stmt {
+                    kind: Bind(
+                        Bind {
+                            lhs: Id<Expr>(0),
+                            kind: Fn {
+                                params: [
+                                    Bind {
+                                        lhs: Id<Expr>(1),
+                                        kind: Infer,
+                                        rhs: Some(
+                                            Id<Expr>(2),
+                                        ),
+                                    },
+                                ],
+                            },
+                            rhs: None,
+                        },
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 15,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 0,
+                        end: 1,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 7,
+                        end: 8,
+                    },
+                },
+                Expr {
+                    kind: Literal(
+                        Int(
+                            55,
+                        ),
+                    ),
+                    span: Span {
+                        start: 12,
+                        end: 14,
+                    },
+                },
+            ],
+        ),
+    },
+    Arena(
+        [
+            Error {
+                kind: UnexpectedToken {
+                    wanted: [
+                        Comma,
+                        RParen,
+                    ],
+                    got: Token {
+                        kind: Semicolon,
+                        span: Span {
+                            start: 14,
+                            end: 15,
+                        },
+                    },
+                },
+                span: Span {
+                    start: 6,
+                    end: 14,
+                },
+            },
+        ],
+    ),
+)

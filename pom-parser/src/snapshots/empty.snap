@@ -12,5 +12,7 @@ expression: "lex_and_parse(\"\")"
             [],
         ),
     },
-    [],
+    Arena(
+        [],
+    ),
 )
