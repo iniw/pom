@@ -4,16 +4,39 @@ expression: "lex_and_parse(\"{55 + 47;;\")"
 ---
 (
     Ast {
-        items: [],
+        items: [
+            Id<Stmt>(2),
+        ],
         stmts: Arena(
             [
                 Stmt {
                     kind: Expr(
-                        Id(2),
+                        Id<Expr>(2),
                     ),
                     span: Span {
                         start: 1,
                         end: 9,
+                    },
+                },
+                Stmt {
+                    kind: Expr(
+                        Id<Expr>(3),
+                    ),
+                    span: Span {
+                        start: 9,
+                        end: 10,
+                    },
+                },
+                Stmt {
+                    kind: Block(
+                        [
+                            Id<Stmt>(0),
+                            Id<Stmt>(1),
+                        ],
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 10,
                     },
                 },
             ],
@@ -44,48 +67,59 @@ expression: "lex_and_parse(\"{55 + 47;;\")"
                 },
                 Expr {
                     kind: Binary {
-                        lhs: Id(0),
+                        lhs: Id<Expr>(0),
                         op: Add,
-                        rhs: Id(1),
+                        rhs: Id<Expr>(1),
                     },
                     span: Span {
                         start: 1,
                         end: 8,
                     },
                 },
+                Expr {
+                    kind: Invalid(
+                        Id<Error>(0),
+                    ),
+                    span: Span {
+                        start: 8,
+                        end: 9,
+                    },
+                },
             ],
         ),
     },
-    [
-        Error {
-            kind: UnexpectedToken {
-                wanted: [
-                    Bool,
-                    Float,
-                    Ident,
-                    Int,
-                    LBrace,
-                    LParen,
-                ],
-                got: Token {
-                    kind: Semicolon,
-                    span: Span {
-                        start: 9,
-                        end: 10,
+    Arena(
+        [
+            Error {
+                kind: UnexpectedToken {
+                    wanted: [
+                        Bool,
+                        Float,
+                        Ident,
+                        Int,
+                        LBrace,
+                        LParen,
+                    ],
+                    got: Token {
+                        kind: Semicolon,
+                        span: Span {
+                            start: 9,
+                            end: 10,
+                        },
                     },
                 },
+                span: Span {
+                    start: 8,
+                    end: 9,
+                },
             },
-            span: Span {
-                start: 8,
-                end: 9,
+            Error {
+                kind: UnbalancedBlock,
+                span: Span {
+                    start: 0,
+                    end: 10,
+                },
             },
-        },
-        Error {
-            kind: UnbalancedBlock,
-            span: Span {
-                start: 0,
-                end: 10,
-            },
-        },
-    ],
+        ],
+    ),
 )

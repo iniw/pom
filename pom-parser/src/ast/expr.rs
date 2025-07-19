@@ -1,6 +1,6 @@
 use pom_utils::{arena::Id, span::Span};
 
-use crate::ast::stmt::Stmt;
+use crate::{ast::stmt::Stmt, error::Error};
 
 #[derive(Debug, PartialEq)]
 pub struct Expr {
@@ -18,6 +18,11 @@ pub enum ExprKind {
 
     Block(Vec<Id<Stmt>>),
 
+    Call {
+        callable: Id<Expr>,
+        args: Vec<Id<Expr>>,
+    },
+
     Ident,
 
     Literal(Literal),
@@ -25,6 +30,8 @@ pub enum ExprKind {
     Paren(Id<Expr>),
 
     Tuple(Vec<Id<Expr>>),
+
+    Invalid(Id<Error>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

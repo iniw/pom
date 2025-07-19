@@ -1,26 +1,26 @@
 ---
 source: pom-parser/src/tests.rs
-expression: "lex_and_parse(\"var: u32 = 47;\")"
+expression: "test(\"var: u32 = 47;\")"
 ---
 (
     Ast {
         items: [
-            Id(0),
+            Id<Stmt>(0),
         ],
         stmts: Arena(
             [
                 Stmt {
-                    kind: Bind {
-                        lhs: Id(0),
-                        kind: Some(
-                            Expr(
-                                Id(1),
+                    kind: Bind(
+                        Bind {
+                            lhs: Id<Expr>(0),
+                            kind: Expr(
+                                Id<Expr>(1),
                             ),
-                        ),
-                        rhs: Some(
-                            Id(2),
-                        ),
-                    },
+                            rhs: Some(
+                                Id<Expr>(2),
+                            ),
+                        },
+                    ),
                     span: Span {
                         start: 0,
                         end: 14,
@@ -58,5 +58,7 @@ expression: "lex_and_parse(\"var: u32 = 47;\")"
             ],
         ),
     },
-    [],
+    Arena(
+        [],
+    ),
 )

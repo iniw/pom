@@ -1,0 +1,61 @@
+---
+source: pom-parser/src/tests.rs
+expression: "lex_and_parse(\"f(55,);\")"
+---
+(
+    Ast {
+        items: [
+            Id<Stmt>(0),
+        ],
+        stmts: Arena(
+            [
+                Stmt {
+                    kind: Expr(
+                        Id<Expr>(2),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 7,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 0,
+                        end: 1,
+                    },
+                },
+                Expr {
+                    kind: Literal(
+                        Int(
+                            55,
+                        ),
+                    ),
+                    span: Span {
+                        start: 2,
+                        end: 4,
+                    },
+                },
+                Expr {
+                    kind: Call {
+                        callable: Id<Expr>(0),
+                        args: [
+                            Id<Expr>(1),
+                        ],
+                    },
+                    span: Span {
+                        start: 0,
+                        end: 6,
+                    },
+                },
+            ],
+        ),
+    },
+    Arena(
+        [],
+    ),
+)

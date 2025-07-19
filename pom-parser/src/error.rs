@@ -1,5 +1,6 @@
 use pom_lexer::token::{Token, TokenKind};
-use pom_utils::span::Span;
+use pom_utils::{arena::Arena, span::Span};
+use smallvec::SmallVec;
 use std::num::{ParseFloatError, ParseIntError};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,11 +17,9 @@ pub enum ErrorKind {
     UnbalancedBlock,
 
     UnexpectedToken {
-        wanted: &'static [TokenKind],
+        wanted: SmallVec<[TokenKind; 8]>,
         got: Token,
     },
 }
 
-pub type Errors = Vec<Error>;
-
-pub type ErrorOr<T> = Result<T, Error>;
+pub type Errors = Arena<Error>;

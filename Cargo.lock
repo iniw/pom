@@ -198,6 +198,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "memchr"
+version = "2.7.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32a282da65faaf38286cf3be983213fcf1d2e2a58700e808f83f4ea9a4804bc0"
+
+[[package]]
+name = "nom"
+version = "8.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df9761775871bdef83bee530e60050f7e54b1105350d6884eb0fb4f46c2f9405"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -233,12 +248,14 @@ version = "0.1.0"
 dependencies = [
  "pom-lexer",
  "pom-utils",
+ "smallvec",
 ]
 
 [[package]]
 name = "pom-sema"
 version = "0.1.0"
 dependencies = [
+ "pom-lexer",
  "pom-parser",
  "pom-utils",
 ]
@@ -248,6 +265,7 @@ name = "pom-utils"
 version = "0.1.0"
 dependencies = [
  "insta",
+ "tynm",
 ]
 
 [[package]]
@@ -296,6 +314,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 
 [[package]]
+name = "smallvec"
+version = "1.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
+
+[[package]]
 name = "strsim"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -310,6 +334,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "tynm"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a21cdb0fc8f85c98b1ec812bc4cd69faf6c0fa2fc17d44ea3c2cdd38dc08e999"
+dependencies = [
+ "nom",
 ]
 
 [[package]]

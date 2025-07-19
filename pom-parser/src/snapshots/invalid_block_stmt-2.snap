@@ -4,15 +4,28 @@ expression: "lex_and_parse(\"{55 + 47;\")"
 ---
 (
     Ast {
-        items: [],
+        items: [
+            Id<Stmt>(1),
+        ],
         stmts: Arena(
             [
                 Stmt {
                     kind: Expr(
-                        Id(2),
+                        Id<Expr>(2),
                     ),
                     span: Span {
                         start: 1,
+                        end: 9,
+                    },
+                },
+                Stmt {
+                    kind: Block(
+                        [
+                            Id<Stmt>(0),
+                        ],
+                    ),
+                    span: Span {
+                        start: 0,
                         end: 9,
                     },
                 },
@@ -44,9 +57,9 @@ expression: "lex_and_parse(\"{55 + 47;\")"
                 },
                 Expr {
                     kind: Binary {
-                        lhs: Id(0),
+                        lhs: Id<Expr>(0),
                         op: Add,
-                        rhs: Id(1),
+                        rhs: Id<Expr>(1),
                     },
                     span: Span {
                         start: 1,
@@ -56,13 +69,15 @@ expression: "lex_and_parse(\"{55 + 47;\")"
             ],
         ),
     },
-    [
-        Error {
-            kind: UnbalancedBlock,
-            span: Span {
-                start: 0,
-                end: 9,
+    Arena(
+        [
+            Error {
+                kind: UnbalancedBlock,
+                span: Span {
+                    start: 0,
+                    end: 9,
+                },
             },
-        },
-    ],
+        ],
+    ),
 )

@@ -4,9 +4,21 @@ expression: "lex_and_parse(\"(55 + 47\")"
 ---
 (
     Ast {
-        items: [],
+        items: [
+            Id<Stmt>(0),
+        ],
         stmts: Arena(
-            [],
+            [
+                Stmt {
+                    kind: Expr(
+                        Id<Expr>(3),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 8,
+                    },
+                },
+            ],
         ),
         exprs: Arena(
             [
@@ -34,36 +46,65 @@ expression: "lex_and_parse(\"(55 + 47\")"
                 },
                 Expr {
                     kind: Binary {
-                        lhs: Id(0),
+                        lhs: Id<Expr>(0),
                         op: Add,
-                        rhs: Id(1),
+                        rhs: Id<Expr>(1),
                     },
                     span: Span {
                         start: 1,
                         end: 8,
                     },
                 },
+                Expr {
+                    kind: Paren(
+                        Id<Expr>(2),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 8,
+                    },
+                },
             ],
         ),
     },
-    [
-        Error {
-            kind: UnexpectedToken {
-                wanted: [
-                    RParen,
-                ],
-                got: Token {
-                    kind: Eof,
-                    span: Span {
-                        start: 4294967295,
-                        end: 4294967295,
+    Arena(
+        [
+            Error {
+                kind: UnexpectedToken {
+                    wanted: [
+                        RParen,
+                    ],
+                    got: Token {
+                        kind: Eof,
+                        span: Span {
+                            start: 4294967295,
+                            end: 4294967295,
+                        },
                     },
                 },
+                span: Span {
+                    start: 0,
+                    end: 8,
+                },
             },
-            span: Span {
-                start: 0,
-                end: 8,
+            Error {
+                kind: UnexpectedToken {
+                    wanted: [
+                        Semicolon,
+                    ],
+                    got: Token {
+                        kind: Eof,
+                        span: Span {
+                            start: 4294967295,
+                            end: 4294967295,
+                        },
+                    },
+                },
+                span: Span {
+                    start: 0,
+                    end: 8,
+                },
             },
-        },
-    ],
+        ],
+    ),
 )

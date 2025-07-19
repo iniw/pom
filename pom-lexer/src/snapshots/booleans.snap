@@ -26,5 +26,7 @@ expression: "lex(\"true false\")"
             },
         },
     ],
-    [],
+    Arena(
+        [],
+    ),
 )

@@ -2,7 +2,7 @@ use pom_utils::arena::{Arena, Id};
 
 use crate::ir::{
     expr::Expr,
-    stmt::{BindKind, Stmt},
+    stmt::{Bind, Stmt},
 };
 
 pub mod expr;
@@ -17,8 +17,15 @@ pub struct Ir {
     pub symbols: Arena<Sym>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Sym {
-    pub kind: Option<BindKind>,
-    pub init: Option<Id<Expr>>,
+    pub kind: SymKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SymKind {
+    Expr(Id<Expr>),
+    Fn { params: Vec<Bind> },
+    Infer,
+    Type,
 }

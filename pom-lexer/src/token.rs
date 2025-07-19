@@ -1,7 +1,7 @@
 use logos::Logos;
-use pom_utils::span::Span;
+use pom_utils::{arena::Id, span::Span};
 
-use crate::error::ErrorKind;
+use crate::error::{Error, ErrorKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Token {
@@ -76,6 +76,8 @@ pub enum TokenKind {
 
     #[token(r"type")]
     Type,
+
+    Invalid(Id<Error>),
 
     Eof,
 }

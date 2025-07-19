@@ -5,7 +5,7 @@ expression: "lex_and_parse(\"{}\")"
 (
     Ast {
         items: [
-            Id(0),
+            Id<Stmt>(0),
         ],
         stmts: Arena(
             [
@@ -24,5 +24,7 @@ expression: "lex_and_parse(\"{}\")"
             [],
         ),
     },
-    [],
+    Arena(
+        [],
+    ),
 )

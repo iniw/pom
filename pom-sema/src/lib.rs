@@ -21,6 +21,7 @@ pub fn analyse(src: &str, ast: Ast) -> (Ir, Errors) {
 pub mod ast {
     use pom_parser::ast::{expr, stmt};
 
+    pub type Bind = stmt::Bind;
     pub type BindKind = stmt::BindKind;
     pub type Stmt = stmt::Stmt;
     pub type StmtKind = stmt::StmtKind;

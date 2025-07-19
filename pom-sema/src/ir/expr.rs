@@ -3,6 +3,7 @@ use pom_utils::{arena::Id, span::Span};
 use crate::{
     ast,
     ir::{Sym, stmt::Stmt},
+    lowering::error::Error,
 };
 
 #[derive(Debug, PartialEq)]
@@ -21,7 +22,14 @@ pub enum ExprKind {
 
     Block(Vec<Id<Stmt>>),
 
+    Call {
+        callable: Id<Expr>,
+        args: Vec<Id<Expr>>,
+    },
+
     Ident(Id<Sym>),
 
     Literal(ast::Literal),
+
+    Invalid(Id<Error>),
 }

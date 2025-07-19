@@ -4,15 +4,16 @@ use pom_lexer::token::{
     Tokens,
 };
 use pom_utils::{arena::Id, span::Span};
+use smallvec::smallvec;
 
 use crate::{
     Errors,
     ast::{
         Ast,
         expr::{BinaryOp, Expr, ExprKind, Literal},
-        stmt::{BindKind, Stmt, StmtKind},
+        stmt::{Bind, BindKind, Stmt, StmtKind},
     },
-    error::{Error, ErrorKind, ErrorOr},
+    error::{Error, ErrorKind},
 };
 
 pub struct Parser<'src> {
@@ -40,123 +41,185 @@ impl<'src> Parser<'src> {
 
     pub fn parse(mut self) -> (Ast, Errors) {
         while self.grab(Eof).is_err() {
-            match self.parse_stmt() {
-                Ok(stmt) => {
-                    self.ast.items.push(stmt);
-                }
-                Err(err) => {
-                    self.errors.push(err);
-                    self.chase(Semicolon);
-                }
-            }
+            let stmt = self.parse_stmt();
+            self.ast.items.push(stmt);
         }
         (self.ast, self.errors)
     }
 
-    fn parse_stmt(&mut self) -> ErrorOr<Id<Stmt>> {
-        let cp = self.checkpoint();
+    fn parse_stmt(&mut self) -> Id<Stmt> {
+        let checkpoint = self.checkpoint();
 
         match self.grab(LBrace) {
             Ok(_) => {
-                let stmts = self.parse_block(cp)?;
-                Ok(self.ast.stmts.push(Stmt {
+                let stmts = self.parse_block(checkpoint);
+                self.ast.stmts.push(Stmt {
                     kind: StmtKind::Block(stmts),
-                    span: self.spanned_since(cp),
-                }))
+                    span: self.spanned_since(checkpoint),
+                })
             }
             Err(_) => self.parse_expr_or_bind(),
         }
     }
 
-    fn parse_expr_or_bind(&mut self) -> ErrorOr<Id<Stmt>> {
-        let cp = self.checkpoint();
+    fn parse_expr_or_bind(&mut self) -> Id<Stmt> {
+        let checkpoint = self.checkpoint();
 
-        let expr = self.parse_expr()?;
+        let expr = self.parse_expr();
 
         let stmt = match self.grab(Colon) {
             Ok(_) => {
                 // We're in a binding, the expr we just parsed becomes the lhs.
                 let lhs = expr;
+                let bind = self.parse_bind_with_lhs(checkpoint, lhs, &[Semicolon]);
+                StmtKind::Bind(bind)
+            }
+            Err(_) => StmtKind::Expr(expr),
+        };
 
-                match self.grab(Equal) {
-                    Ok(_) => {
-                        let rhs = self.parse_expr()?;
+        // Don't bother looking for a semicolon if the expr wasn't successfully parsed.
+        if !matches!(self.ast.exprs[expr].kind, ExprKind::Invalid(_)) {
+            if let Err(token) = self.grab(Semicolon) {
+                _ = self.errors.push(Error {
+                    kind: ErrorKind::UnexpectedToken {
+                        wanted: smallvec![Semicolon],
+                        got: token,
+                    },
+                    span: self.spanned_since(checkpoint),
+                });
+            }
+        }
 
-                        StmtKind::Bind {
-                            lhs,
-                            kind: None,
-                            rhs: Some(rhs),
-                        }
-                    }
-                    Err(_) => {
-                        let kind = match self.grab_any(&[Fn, Type]).map(|token| token.kind) {
-                            Ok(Fn) => BindKind::Fn,
-                            Ok(Type) => BindKind::Type,
+        self.ast.stmts.push(Stmt {
+            kind: stmt,
+            span: self.spanned_since(checkpoint),
+        })
+    }
+
+    fn parse_bind(&mut self, sentinels: &[TokenKind]) -> Bind {
+        let checkpoint = self.checkpoint();
+
+        let lhs = self.parse_expr();
+
+        if let Err(token) = self.grab(Colon) {
+            _ = self.errors.push(Error {
+                kind: ErrorKind::UnexpectedToken {
+                    wanted: smallvec![Colon],
+                    got: token,
+                },
+                span: self.spanned_since(checkpoint),
+            })
+        }
+
+        self.parse_bind_with_lhs(checkpoint, lhs, sentinels)
+    }
+
+    fn parse_bind_with_lhs(
+        &mut self,
+        checkpoint: usize,
+        lhs: Id<Expr>,
+        sentinels: &[TokenKind],
+    ) -> Bind {
+        if self.grab(Equal).is_ok() {
+            let rhs = self.parse_expr();
+            return Bind {
+                lhs,
+                kind: BindKind::Infer,
+                rhs: Some(rhs),
+            };
+        }
+
+        let kind = match self.grab_any(&[Fn, Type]).map(|token| token.kind) {
+            Ok(Fn) => {
+                let mut params = Vec::new();
+
+                // Generate a new checkpoint when parsing the parameter list for better error reporting.
+                let checkpoint = self.checkpoint();
+
+                if self.grab(LParen).is_ok() && self.grab(RParen).is_err() {
+                    loop {
+                        params.push(self.parse_bind(&[Comma, RParen]));
+
+                        match self.grab_any(&[Comma, RParen]).map(|token| token.kind) {
+                            Ok(Comma) => continue,
+                            Ok(RParen) => break,
+                            Err(token) => {
+                                _ = self.errors.push(Error {
+                                    kind: ErrorKind::UnexpectedToken {
+                                        wanted: smallvec![Comma, RParen],
+                                        got: token,
+                                    },
+                                    span: self.spanned_since(checkpoint),
+                                });
+                                break;
+                            }
                             Ok(_) => {
                                 unreachable!(
                                     "The possible patterns are constrained by a previous `grab`."
                                 )
                             }
-                            Err(_) => BindKind::Expr(self.parse_expr()?),
-                        };
-
-                        match self.grab(Equal) {
-                            Ok(_) => {
-                                let rhs = self.parse_expr()?;
-
-                                StmtKind::Bind {
-                                    lhs,
-                                    kind: Some(kind),
-                                    rhs: Some(rhs),
-                                }
-                            }
-                            // Finding a semicolon after successfully parsing the kind indicates an uninitialized binding, that is, a binding with no rhs.
-                            Err(token) if token.kind == Semicolon => StmtKind::Bind {
-                                lhs,
-                                kind: Some(kind),
-                                rhs: None,
-                            },
-                            Err(token) => {
-                                return Err(Error {
-                                    kind: ErrorKind::UnexpectedToken {
-                                        wanted: &[Equal, Semicolon],
-                                        got: token,
-                                    },
-                                    span: self.spanned_since(cp),
-                                });
-                            }
                         }
                     }
                 }
+
+                BindKind::Fn { params }
             }
-            Err(_) => StmtKind::Expr(expr),
+            Ok(Type) => BindKind::Type,
+            // Infer the kind of bindings when prematurely reaching a sentinel.
+            // This helps reconstruct a valid AST in weird cases such as:
+            // `f: fn (a:) = a;`
+            // `f: fn (a) = a;`
+            Err(token) if sentinels.contains(&token.kind) => BindKind::Infer,
+            Err(_) => BindKind::Expr(self.parse_expr()),
+            Ok(_) => {
+                unreachable!("The possible patterns are constrained by a previous `grab`.")
+            }
         };
 
-        self.grab(Semicolon).map_err(|token| Error {
-            kind: ErrorKind::UnexpectedToken {
-                wanted: &[Semicolon],
-                got: token,
+        match self.grab(Equal) {
+            Ok(_) => {
+                let rhs = self.parse_expr();
+                Bind {
+                    lhs,
+                    kind,
+                    rhs: Some(rhs),
+                }
+            }
+            // Finding a sentinel after successfully parsing the kind indicates an uninitialized binding, that is, a binding with no rhs.
+            Err(token) if sentinels.contains(&token.kind) => Bind {
+                lhs,
+                kind,
+                rhs: None,
             },
-            span: self.spanned_since(cp),
-        })?;
+            Err(token) => {
+                let mut wanted = smallvec![Equal];
+                wanted.extend_from_slice(sentinels);
 
-        Ok(self.ast.stmts.push(Stmt {
-            kind: stmt,
-            span: self.spanned_since(cp),
-        }))
+                _ = self.errors.push(Error {
+                    kind: ErrorKind::UnexpectedToken { wanted, got: token },
+                    span: self.spanned_since(checkpoint),
+                });
+
+                Bind {
+                    lhs,
+                    kind,
+                    rhs: None,
+                }
+            }
+        }
     }
 
-    fn parse_expr(&mut self) -> ErrorOr<Id<Expr>> {
+    fn parse_expr(&mut self) -> Id<Expr> {
         self.parse_expr_precedence0()
     }
 
-    fn parse_expr_precedence0(&mut self) -> ErrorOr<Id<Expr>> {
-        let cp = self.checkpoint();
+    fn parse_expr_precedence0(&mut self) -> Id<Expr> {
+        let checkpoint = self.checkpoint();
 
-        let mut lhs = self.parse_expr_precedence1()?;
+        let mut lhs = self.parse_expr_precedence1();
 
         while let Ok(token) = self.grab_any(&[Plus, Minus]) {
-            let rhs = self.parse_expr_precedence1()?;
+            let rhs = self.parse_expr_precedence1();
 
             let op = match token.kind {
                 Plus => BinaryOp::Add,
@@ -166,20 +229,20 @@ impl<'src> Parser<'src> {
 
             lhs = self.ast.exprs.push(Expr {
                 kind: ExprKind::Binary { lhs, op, rhs },
-                span: self.spanned_since(cp),
+                span: self.spanned_since(checkpoint),
             });
         }
 
-        Ok(lhs)
+        lhs
     }
 
-    fn parse_expr_precedence1(&mut self) -> ErrorOr<Id<Expr>> {
-        let cp = self.checkpoint();
+    fn parse_expr_precedence1(&mut self) -> Id<Expr> {
+        let checkpoint = self.checkpoint();
 
-        let mut lhs = self.parse_expr_precedence2()?;
+        let mut lhs = self.parse_expr_precedence2();
 
         while let Ok(token) = self.grab_any(&[Star, Slash]) {
-            let rhs = self.parse_expr_precedence2()?;
+            let rhs = self.parse_expr_precedence2();
 
             let op = match token.kind {
                 Star => BinaryOp::Mul,
@@ -189,120 +252,187 @@ impl<'src> Parser<'src> {
 
             lhs = self.ast.exprs.push(Expr {
                 kind: ExprKind::Binary { lhs, op, rhs },
-                span: self.spanned_since(cp),
+                span: self.spanned_since(checkpoint),
             });
         }
 
-        Ok(lhs)
+        lhs
     }
 
-    fn parse_expr_precedence2(&mut self) -> ErrorOr<Id<Expr>> {
-        let cp = self.checkpoint();
+    fn parse_expr_precedence2(&mut self) -> Id<Expr> {
+        let checkpoint = self.checkpoint();
 
-        const WANTED: &[TokenKind] = &[Bool, Float, Ident, Int, LBrace, LParen];
+        let mut callable = self.parse_expr_precedence3();
 
-        let token = self.grab_any(WANTED).map_err(|token| Error {
-            kind: ErrorKind::UnexpectedToken {
-                wanted: WANTED,
-                got: token,
-            },
-            span: self.spanned_since(cp),
-        })?;
+        while self.grab(LParen).is_ok() {
+            let mut args = Vec::new();
+
+            while self.grab(RParen).is_err() {
+                let arg = self.parse_expr();
+                args.push(arg);
+
+                match self.grab_any(&[Comma, RParen]).map(|token| token.kind) {
+                    Ok(Comma) => continue,
+                    Ok(RParen) => break,
+                    Err(token) => {
+                        _ = self.errors.push(Error {
+                            kind: ErrorKind::UnexpectedToken {
+                                wanted: smallvec![Comma, RParen],
+                                got: token,
+                            },
+                            span: self.spanned_since(checkpoint),
+                        });
+                        break;
+                    }
+                    _ => {
+                        unreachable!("The possible patterns are constrained by a previous `grab`.")
+                    }
+                }
+            }
+
+            callable = self.ast.exprs.push(Expr {
+                kind: ExprKind::Call { callable, args },
+                span: self.spanned_since(checkpoint),
+            });
+        }
+
+        callable
+    }
+
+    fn parse_expr_precedence3(&mut self) -> Id<Expr> {
+        let checkpoint = self.checkpoint();
+
+        let wanted = smallvec![Bool, Float, Ident, Int, LBrace, LParen];
+
+        let token = match self.grab_any(&wanted) {
+            Ok(token) => token,
+            Err(token) => {
+                return self.invalid_expr(Error {
+                    kind: ErrorKind::UnexpectedToken { wanted, got: token },
+                    span: self.spanned_since(checkpoint),
+                });
+            }
+        };
 
         match token.kind {
-            Bool => match token.span.text(self.src) {
-                "true" => Ok(self.ast.exprs.push(Expr {
-                    kind: ExprKind::Literal(Literal::Bool(true)),
-                    span: self.spanned_since(cp),
-                })),
-                "false" => Ok(self.ast.exprs.push(Expr {
-                    kind: ExprKind::Literal(Literal::Bool(false)),
-                    span: self.spanned_since(cp),
-                })),
-                _ => unreachable!(
-                    "The lexer should never produce `Bool` for anything other than 'true' or 'false'"
-                ),
-            },
-            Float => match token.span.text(self.src).parse() {
-                Ok(float) => Ok(self.ast.exprs.push(Expr {
+            Bool => {
+                let bool = match token.span.text(self.src) {
+                    "true" => true,
+                    "false" => false,
+                    _ => unreachable!(
+                        "The lexer should never produce `Bool` for anything other than 'true' or 'false'"
+                    ),
+                };
+                self.ast.exprs.push(Expr {
+                    kind: ExprKind::Literal(Literal::Bool(bool)),
+                    span: self.spanned_since(checkpoint),
+                })
+            }
+            Float => {
+                let float = match token.span.text(self.src).parse() {
+                    Ok(float) => float,
+                    Err(err) => {
+                        _ = self.errors.push(Error {
+                            kind: ErrorKind::InvalidFloatLiteral(err),
+                            span: self.spanned_since(checkpoint),
+                        });
+                        // Use a dummy literal in the case of a parse error.
+                        0.0
+                    }
+                };
+                self.ast.exprs.push(Expr {
                     kind: ExprKind::Literal(Literal::Float(float)),
-                    span: self.spanned_since(cp),
-                })),
-                Err(err) => Err(Error {
-                    kind: ErrorKind::InvalidFloatLiteral(err),
-                    span: self.spanned_since(cp),
-                }),
-            },
-            Ident => Ok(self.ast.exprs.push(Expr {
+                    span: self.spanned_since(checkpoint),
+                })
+            }
+            Ident => self.ast.exprs.push(Expr {
                 kind: ExprKind::Ident,
-                span: self.spanned_since(cp),
-            })),
-            Int => match token.span.text(self.src).parse() {
-                Ok(int) => Ok(self.ast.exprs.push(Expr {
+                span: self.spanned_since(checkpoint),
+            }),
+            Int => {
+                let int = match token.span.text(self.src).parse() {
+                    Ok(int) => int,
+                    Err(err) => {
+                        _ = self.errors.push(Error {
+                            kind: ErrorKind::InvalidIntLiteral(err),
+                            span: self.spanned_since(checkpoint),
+                        });
+                        // Use a dummy literal in the case of a parse error.
+                        0
+                    }
+                };
+                self.ast.exprs.push(Expr {
                     kind: ExprKind::Literal(Literal::Int(int)),
-                    span: self.spanned_since(cp),
-                })),
-                Err(err) => Err(Error {
-                    kind: ErrorKind::InvalidIntLiteral(err),
-                    span: self.spanned_since(cp),
-                }),
-            },
+                    span: self.spanned_since(checkpoint),
+                })
+            }
             LBrace => {
-                let stmts = self.parse_block(cp)?;
-                Ok(self.ast.exprs.push(Expr {
+                let stmts = self.parse_block(checkpoint);
+                self.ast.exprs.push(Expr {
                     kind: ExprKind::Block(stmts),
-                    span: self.spanned_since(cp),
-                }))
+                    span: self.spanned_since(checkpoint),
+                })
             }
             LParen => match self.grab(RParen) {
-                Ok(_) => Ok(self.ast.exprs.push(Expr {
+                Ok(_) => self.ast.exprs.push(Expr {
                     kind: ExprKind::Tuple(Vec::new()),
-                    span: self.spanned_since(cp),
-                })),
+                    span: self.spanned_since(checkpoint),
+                }),
                 Err(_) => {
-                    let expr = self.parse_expr()?;
+                    let expr = self.parse_expr();
 
-                    // TODO: Parse tuples
+                    // TODO: Parse tuples.
 
-                    self.grab(RParen).map_err(|token| Error {
-                        kind: ErrorKind::UnexpectedToken {
-                            wanted: &[RParen],
-                            got: token,
-                        },
-                        span: self.spanned_since(cp),
-                    })?;
+                    if let Err(token) = self.grab(RParen) {
+                        _ = self.errors.push(Error {
+                            kind: ErrorKind::UnexpectedToken {
+                                wanted: smallvec![RParen],
+                                got: token,
+                            },
+                            span: self.spanned_since(checkpoint),
+                        })
+                    }
 
-                    Ok(self.ast.exprs.push(Expr {
+                    self.ast.exprs.push(Expr {
                         kind: ExprKind::Paren(expr),
-                        span: self.spanned_since(cp),
-                    }))
+                        span: self.spanned_since(checkpoint),
+                    })
                 }
             },
             _ => unreachable!("The possible patterns are constrained by a previous `grab`."),
         }
     }
 
-    fn parse_block(&mut self, checkpoint: usize) -> ErrorOr<Vec<Id<Stmt>>> {
+    fn parse_block(&mut self, checkpoint: usize) -> Vec<Id<Stmt>> {
         let mut stmts = Vec::new();
 
         while let Err(token) = self.grab(RBrace) {
             if token.kind == Eof {
-                return Err(Error {
+                _ = self.errors.push(Error {
                     kind: ErrorKind::UnbalancedBlock,
                     span: self.spanned_since(checkpoint),
                 });
+                break;
             }
 
-            match self.parse_stmt() {
-                Ok(stmt) => stmts.push(stmt),
-                Err(err) => {
-                    self.errors.push(err);
-                    self.chase(Semicolon);
-                }
-            }
+            stmts.push(self.parse_stmt());
         }
 
-        Ok(stmts)
+        stmts
+    }
+
+    fn invalid_expr(&mut self, err: Error) -> Id<Expr> {
+        // Consume the invalid token if we haven't reached the end of the token stream.
+        if self.tokens[self.cursor].kind != Eof {
+            self.cursor += 1;
+        }
+
+        let span = err.span;
+        let err = self.errors.push(err);
+        self.ast.exprs.push(Expr {
+            kind: ExprKind::Invalid(err),
+            span,
+        })
     }
 
     fn grab(&mut self, wanted: TokenKind) -> Result<Token, Token> {
@@ -320,25 +450,6 @@ impl<'src> Parser<'src> {
             Ok(token)
         } else {
             Err(token)
-        }
-    }
-
-    fn chase(&mut self, wanted: TokenKind) -> Option<Token> {
-        self.chase_with(|token| token == wanted)
-    }
-
-    #[expect(dead_code)]
-    fn chase_any(&mut self, wanted_list: &[TokenKind]) -> Option<Token> {
-        self.chase_with(|token| wanted_list.contains(&token))
-    }
-
-    fn chase_with(&mut self, f: impl std::ops::Fn(TokenKind) -> bool) -> Option<Token> {
-        loop {
-            match self.grab_with(&f) {
-                Ok(token) => return Some(token),
-                Err(token) if token.kind == Eof => return None,
-                _ => self.cursor += 1,
-            }
         }
     }
 

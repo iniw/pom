@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 insta = { version = "1.43.1", optional = true }
+tynm = "0.2.0"
 
 [features]
 snap = ["dep:insta"]

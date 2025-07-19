@@ -1,4 +1,9 @@
-use pom_utils::span::Span;
+use pom_utils::{
+    arena::{Arena, Id},
+    span::Span,
+};
+
+use pom_parser::error::Error as ParserError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Error {
@@ -9,8 +14,7 @@ pub struct Error {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorKind {
     UnknownSymbol,
+    ParserError(Id<ParserError>),
 }
 
-pub type Errors = Vec<Error>;
-
-pub type ErrorOr<T> = Result<T, Error>;
+pub type Errors = Arena<Error>;
