@@ -1,7 +1,8 @@
 use logos::Logos;
-use pom_utils::{arena::Id, span::Span};
+use pom_utils::span::Span;
+use static_assertions::const_assert_eq;
 
-use crate::error::{Error, ErrorKind};
+use crate::error::ErrorKind;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Token {
@@ -77,9 +78,13 @@ pub enum TokenKind {
     #[token(r"type")]
     Type,
 
-    Invalid(Id<Error>),
+    Invalid,
 
     Eof,
 }
 
 pub type Tokens = Vec<Token>;
+
+// This should be as tiny as possible.
+// Increasing the size of this enum increases the size of several things throughout the compiler.
+const_assert_eq!(std::mem::size_of::<TokenKind>(), 1);

@@ -12,18 +12,14 @@ expression: "lex(\"55 ^ $ 47\")"
             },
         },
         Token {
-            kind: Invalid(
-                Id<Error>(0),
-            ),
+            kind: Invalid,
             span: Span {
                 start: 3,
                 end: 4,
             },
         },
         Token {
-            kind: Invalid(
-                Id<Error>(1),
-            ),
+            kind: Invalid,
             span: Span {
                 start: 5,
                 end: 6,
