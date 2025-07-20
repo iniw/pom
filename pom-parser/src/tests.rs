@@ -48,7 +48,6 @@ fn invalid_bind_fn() {
 fn block_stmt() {
     snap!(test("{55 + 47; 1 * 1;}"));
     snap!(test("{55 + 47;}"));
-    snap!(test("{;}"));
     snap!(test("{}"));
 }
 
@@ -57,8 +56,10 @@ fn invalid_block_stmt() {
     snap!(test("{55 + 47;;"));
     snap!(test("{55 + 47;"));
     snap!(test("{55 + 47"));
+    snap!(test("{;}"));
     snap!(test("{;"));
     snap!(test("{"));
+    snap!(test("{; 1 + 1;}"));
 }
 
 #[test]

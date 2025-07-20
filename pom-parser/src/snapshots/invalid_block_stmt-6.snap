@@ -1,6 +1,6 @@
 ---
 source: pom-parser/src/tests.rs
-expression: "test(\"{}\")"
+expression: "test(\"{\")"
 ---
 (
     Ast {
@@ -15,7 +15,7 @@ expression: "test(\"{}\")"
                     ),
                     span: Span {
                         start: 0,
-                        end: 2,
+                        end: 1,
                     },
                 },
             ],
@@ -25,6 +25,14 @@ expression: "test(\"{}\")"
         ),
     },
     Arena(
-        [],
+        [
+            Error {
+                kind: UnbalancedBlock,
+                span: Span {
+                    start: 0,
+                    end: 1,
+                },
+            },
+        ],
     ),
 )
