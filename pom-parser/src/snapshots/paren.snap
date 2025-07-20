@@ -1,6 +1,6 @@
 ---
 source: pom-parser/src/tests.rs
-expression: "lex_and_parse(\"(55 + 47);\")"
+expression: "test(\"(55 + 47);\")"
 ---
 (
     Ast {

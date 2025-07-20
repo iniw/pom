@@ -1,6 +1,6 @@
 ---
 source: pom-sema/src/lowering/tests.rs
-expression: "lex_parse_and_lower(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\"#)"
+expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\"#)"
 ---
 (
     Ir {
