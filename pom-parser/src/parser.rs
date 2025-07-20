@@ -186,6 +186,7 @@ impl<'src> Parser<'src> {
                 }
             }
             // Finding a sentinel after successfully parsing the kind indicates an uninitialized binding, that is, a binding with no rhs.
+            // This is valid syntax, no error should be reported.
             Err(token) if sentinels.contains(&token.kind) => Bind {
                 lhs,
                 kind,
