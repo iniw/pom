@@ -1,6 +1,6 @@
 ---
 source: pom-parser/src/tests.rs
-expression: "lex_and_parse(\"(;);\")"
+expression: "test(\"(;);\")"
 ---
 (
     Ast {

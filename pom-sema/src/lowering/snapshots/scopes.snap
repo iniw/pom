@@ -1,6 +1,6 @@
 ---
 source: pom-sema/src/lowering/tests.rs
-expression: "lex_parse_and_lower(r#\"\na := 55;\nb := a + a;\n\"#)"
+expression: "test(r#\"\na := 55;\nb := a + a;\n\"#)"
 ---
 (
     Ir {
