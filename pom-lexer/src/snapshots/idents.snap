@@ -61,7 +61,5 @@ expression: "lex(\"w w1 _ _w1 W W1 W1_1W\")"
             },
         },
     ],
-    Arena(
-        [],
-    ),
+    [],
 )

@@ -1,10 +1,9 @@
 use pom_lexer::token::{
-    Token,
+    Token, TokenExt,
     TokenKind::{self, *},
     Tokens,
 };
 use pom_utils::{arena::Id, span::Span};
-use smallvec::smallvec;
 
 use crate::{
     Errors,
@@ -71,7 +70,7 @@ impl<'src> Parser<'src> {
             Ok(_) => {
                 // We're in a binding, the expr we just parsed becomes the lhs.
                 let lhs = expr;
-                let bind = self.parse_bind_with_lhs(checkpoint, lhs, &[Semicolon]);
+                let bind = self.parse_bind_with_lhs(lhs, &[Semicolon], checkpoint);
                 StmtKind::Bind(bind)
             }
             Err(_) => StmtKind::Expr(expr),
@@ -79,15 +78,7 @@ impl<'src> Parser<'src> {
 
         // Don't bother looking for a semicolon if the expr wasn't successfully parsed.
         if !matches!(self.ast.exprs[expr].kind, ExprKind::Invalid(_)) {
-            if let Err(token) = self.grab(Semicolon) {
-                _ = self.errors.push(Error {
-                    kind: ErrorKind::UnexpectedToken {
-                        wanted: smallvec![Semicolon],
-                        got: token,
-                    },
-                    span: self.spanned_since(checkpoint),
-                });
-            }
+            self.expect(Semicolon, checkpoint);
         }
 
         self.ast.stmts.push(Stmt {
@@ -101,24 +92,16 @@ impl<'src> Parser<'src> {
 
         let lhs = self.parse_expr();
 
-        if let Err(token) = self.grab(Colon) {
-            _ = self.errors.push(Error {
-                kind: ErrorKind::UnexpectedToken {
-                    wanted: smallvec![Colon],
-                    got: token,
-                },
-                span: self.spanned_since(checkpoint),
-            })
-        }
+        self.expect(Colon, checkpoint);
 
-        self.parse_bind_with_lhs(checkpoint, lhs, sentinels)
+        self.parse_bind_with_lhs(lhs, sentinels, checkpoint)
     }
 
     fn parse_bind_with_lhs(
         &mut self,
-        checkpoint: usize,
         lhs: Id<Expr>,
         sentinels: &[TokenKind],
+        checkpoint: usize,
     ) -> Bind {
         if self.grab(Equal).is_ok() {
             let rhs = self.parse_expr();
@@ -129,31 +112,26 @@ impl<'src> Parser<'src> {
             };
         }
 
-        let kind = match self.grab_any(&[Fn, Type]).map(|token| token.kind) {
+        let kind = match self.grab_any(&[Fn, Type]).kind() {
             Ok(Fn) => {
                 let mut params = Vec::new();
 
-                // Generate a new checkpoint when parsing the parameter list for better error reporting.
+                // Make a new checkpoint when parsing the parameter list for better error reporting.
                 let checkpoint = self.checkpoint();
 
-                if self.grab(LParen).is_ok() && self.grab(RParen).is_err() {
-                    loop {
-                        params.push(self.parse_bind(&[Comma, RParen]));
+                if self.grab(LParen).is_ok() {
+                    while self.grab(RParen).is_err() {
+                        let bind = self.parse_bind(&[Comma, RParen]);
+                        params.push(bind);
 
-                        match self.grab_any(&[Comma, RParen]).map(|token| token.kind) {
+                        match self.expect_any(&[Comma, RParen], checkpoint).kind() {
                             Ok(Comma) => continue,
                             Ok(RParen) => break,
-                            Err(token) => {
-                                _ = self.errors.push(Error {
-                                    kind: ErrorKind::UnexpectedToken {
-                                        wanted: smallvec![Comma, RParen],
-                                        got: token,
-                                    },
-                                    span: self.spanned_since(checkpoint),
-                                });
-                                break;
-                            }
-                            Ok(_) => {
+
+                            // Break on error to avoid getting potentially stuck in a loop finding the delimiter pair.
+                            Err(_) => break,
+
+                            _ => {
                                 unreachable!(
                                     "The possible patterns are constrained by a previous `grab`."
                                 )
@@ -164,20 +142,40 @@ impl<'src> Parser<'src> {
 
                 BindKind::Fn { params }
             }
+
             Ok(Type) => BindKind::Type,
+
             // Infer the kind of bindings when prematurely reaching a sentinel.
             // This helps reconstruct a valid AST in weird cases such as:
             // `f: fn (a:) = a;`
             // `f: fn (a) = a;`
-            Err(token) if sentinels.contains(&token.kind) => BindKind::Infer,
-            Err(_) => BindKind::Expr(self.parse_expr()),
-            Ok(_) => {
+            Err(token) if sentinels.contains(&token.kind) => {
+                _ = self.errors.push(Error {
+                    kind: ErrorKind::UnexpectedToken {
+                        // NOTE: This is a best effort list. The actual valid tokens here are [Fn, Type, {arbitrary expression}],
+                        //       but it doesn't seem very useful to dump out all of the expression tokens.
+                        wanted: vec![Fn, Type, Ident],
+                        got: token,
+                    },
+                    span: self.spanned_since(checkpoint),
+                });
+                BindKind::Infer
+            }
+
+            Err(_) => {
+                let expr = self.parse_expr();
+                BindKind::Expr(expr)
+            }
+
+            _ => {
                 unreachable!("The possible patterns are constrained by a previous `grab`.")
             }
         };
 
-        match self.grab(Equal) {
-            Ok(_) => {
+        let wanted = [&[Equal], sentinels].concat();
+
+        match self.expect_any(&wanted, checkpoint).kind() {
+            Ok(Equal) => {
                 let rhs = self.parse_expr();
                 Bind {
                     lhs,
@@ -186,25 +184,25 @@ impl<'src> Parser<'src> {
                 }
             }
             // Finding a sentinel after successfully parsing the kind indicates an uninitialized binding, that is, a binding with no rhs.
-            // This is valid syntax, no error should be reported.
-            Err(token) if sentinels.contains(&token.kind) => Bind {
-                lhs,
-                kind,
-                rhs: None,
-            },
-            Err(token) => {
-                let mut wanted = smallvec![Equal];
-                wanted.extend_from_slice(sentinels);
-
-                _ = self.errors.push(Error {
-                    kind: ErrorKind::UnexpectedToken { wanted, got: token },
-                    span: self.spanned_since(checkpoint),
-                });
-
+            Ok(_) => {
+                // Give back the sentinel we just consumed. The callers of this function expect it to still be there when it returns.
+                self.cursor -= 1;
                 Bind {
                     lhs,
                     kind,
                     rhs: None,
+                }
+            }
+            Err(err) => {
+                // To differentiate between an uninitialized binding and one with a parsing error, set the rhs to an invalid expression instead of None.
+                let rhs = self.ast.exprs.push(Expr {
+                    kind: ExprKind::Invalid(err),
+                    span: self.spanned_since(checkpoint),
+                });
+                Bind {
+                    lhs,
+                    kind,
+                    rhs: Some(rhs),
                 }
             }
         }
@@ -272,19 +270,13 @@ impl<'src> Parser<'src> {
                 let arg = self.parse_expr();
                 args.push(arg);
 
-                match self.grab_any(&[Comma, RParen]).map(|token| token.kind) {
+                match self.expect_any(&[Comma, RParen], checkpoint).kind() {
                     Ok(Comma) => continue,
                     Ok(RParen) => break,
-                    Err(token) => {
-                        _ = self.errors.push(Error {
-                            kind: ErrorKind::UnexpectedToken {
-                                wanted: smallvec![Comma, RParen],
-                                got: token,
-                            },
-                            span: self.spanned_since(checkpoint),
-                        });
-                        break;
-                    }
+
+                    // Break on error to avoid getting potentially stuck in a loop finding the delimiter pair.
+                    Err(_) => break,
+
                     _ => {
                         unreachable!("The possible patterns are constrained by a previous `grab`.")
                     }
@@ -303,13 +295,11 @@ impl<'src> Parser<'src> {
     fn parse_expr_precedence3(&mut self) -> Id<Expr> {
         let checkpoint = self.checkpoint();
 
-        let wanted = smallvec![Bool, Float, Ident, Int, LBrace, LParen];
-
-        let token = match self.grab_any(&wanted) {
+        let token = match self.expect_any(&[Bool, Float, Ident, Int, LBrace, LParen], checkpoint) {
             Ok(token) => token,
-            Err(token) => {
-                return self.invalid_expr(Error {
-                    kind: ErrorKind::UnexpectedToken { wanted, got: token },
+            Err(err) => {
+                return self.ast.exprs.push(Expr {
+                    kind: ExprKind::Invalid(err),
                     span: self.spanned_since(checkpoint),
                 });
             }
@@ -384,15 +374,7 @@ impl<'src> Parser<'src> {
 
                     // TODO: Parse tuples.
 
-                    if let Err(token) = self.grab(RParen) {
-                        _ = self.errors.push(Error {
-                            kind: ErrorKind::UnexpectedToken {
-                                wanted: smallvec![RParen],
-                                got: token,
-                            },
-                            span: self.spanned_since(checkpoint),
-                        })
-                    }
+                    self.expect(RParen, checkpoint);
 
                     self.ast.exprs.push(Expr {
                         kind: ExprKind::Paren(expr),
@@ -416,32 +398,19 @@ impl<'src> Parser<'src> {
                 break;
             }
 
-            stmts.push(self.parse_stmt());
+            let stmt = self.parse_stmt();
+            stmts.push(stmt);
         }
 
         stmts
-    }
-
-    fn invalid_expr(&mut self, err: Error) -> Id<Expr> {
-        // Consume the invalid token if we haven't reached the end of the token stream.
-        if self.tokens[self.cursor].kind != Eof {
-            self.cursor += 1;
-        }
-
-        let span = err.span;
-        let err = self.errors.push(err);
-        self.ast.exprs.push(Expr {
-            kind: ExprKind::Invalid(err),
-            span,
-        })
     }
 
     fn grab(&mut self, wanted: TokenKind) -> Result<Token, Token> {
         self.grab_with(|token| token == wanted)
     }
 
-    fn grab_any(&mut self, wanted_list: &[TokenKind]) -> Result<Token, Token> {
-        self.grab_with(|token| wanted_list.contains(&token))
+    fn grab_any(&mut self, wanted: &[TokenKind]) -> Result<Token, Token> {
+        self.grab_with(|token| wanted.contains(&token))
     }
 
     fn grab_with(&mut self, f: impl FnOnce(TokenKind) -> bool) -> Result<Token, Token> {
@@ -451,6 +420,41 @@ impl<'src> Parser<'src> {
             Ok(token)
         } else {
             Err(token)
+        }
+    }
+
+    fn expect(&mut self, wanted: TokenKind, checkpoint: usize) -> Option<Id<Error>> {
+        match self.grab(wanted) {
+            Ok(_) => None,
+            Err(token) => Some(self.errors.push(Error {
+                kind: ErrorKind::UnexpectedToken {
+                    wanted: vec![wanted],
+                    got: token,
+                },
+                span: self.spanned_since(checkpoint),
+            })),
+        }
+    }
+
+    fn expect_any(&mut self, wanted: &[TokenKind], checkpoint: usize) -> Result<Token, Id<Error>> {
+        match self.grab_any(wanted) {
+            Ok(token) => Ok(token),
+            Err(token) => {
+                let err = self.errors.push(Error {
+                    kind: ErrorKind::UnexpectedToken {
+                        wanted: wanted.to_vec(),
+                        got: token,
+                    },
+                    span: self.spanned_since(checkpoint),
+                });
+
+                // Consume the invalid token if we haven't reached the end of the token stream.
+                if self.tokens[self.cursor].kind != Eof {
+                    self.cursor += 1;
+                }
+
+                Err(err)
+            }
         }
     }
 

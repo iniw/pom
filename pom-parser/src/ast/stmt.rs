@@ -1,6 +1,6 @@
 use pom_utils::{arena::Id, span::Span};
 
-use crate::ast::expr::Expr;
+use crate::{ast::expr::Expr, error::Error};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Stmt {
@@ -17,17 +17,18 @@ pub enum StmtKind {
     Expr(Id<Expr>),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Bind {
     pub lhs: Id<Expr>,
     pub kind: BindKind,
     pub rhs: Option<Id<Expr>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum BindKind {
     Expr(Id<Expr>),
     Fn { params: Vec<Bind> },
-    Infer,
     Type,
+
+    Infer,
 }

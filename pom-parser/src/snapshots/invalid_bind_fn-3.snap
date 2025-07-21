@@ -24,7 +24,9 @@ expression: "test(\"f: fn (a = 55;\")"
                                     },
                                 ],
                             },
-                            rhs: None,
+                            rhs: Some(
+                                Id<Expr>(3),
+                            ),
                         },
                     ),
                     span: Span {
@@ -59,6 +61,15 @@ expression: "test(\"f: fn (a = 55;\")"
                     span: Span {
                         start: 11,
                         end: 13,
+                    },
+                },
+                Expr {
+                    kind: Invalid(
+                        Id<Error>(2),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 14,
                     },
                 },
             ],
@@ -101,6 +112,43 @@ expression: "test(\"f: fn (a = 55;\")"
                 span: Span {
                     start: 6,
                     end: 13,
+                },
+            },
+            Error {
+                kind: UnexpectedToken {
+                    wanted: [
+                        Equal,
+                        Semicolon,
+                    ],
+                    got: Token {
+                        kind: Eof,
+                        span: Span {
+                            start: 4294967295,
+                            end: 4294967295,
+                        },
+                    },
+                },
+                span: Span {
+                    start: 0,
+                    end: 14,
+                },
+            },
+            Error {
+                kind: UnexpectedToken {
+                    wanted: [
+                        Semicolon,
+                    ],
+                    got: Token {
+                        kind: Eof,
+                        span: Span {
+                            start: 4294967295,
+                            end: 4294967295,
+                        },
+                    },
+                },
+                span: Span {
+                    start: 0,
+                    end: 14,
                 },
             },
         ],

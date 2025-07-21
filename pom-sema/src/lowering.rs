@@ -1,10 +1,10 @@
 use pom_parser::ast::Ast;
-use pom_utils::arena::Id;
+use pom_utils::arena::{Arena, Id};
 
 use crate::{
     ast,
     ir::{
-        Ir, Sym, SymKind,
+        Ir, Sym, SymKind, Type,
         expr::{Expr, ExprKind},
         stmt::{Bind, Stmt, StmtKind},
     },
@@ -15,7 +15,11 @@ pub mod error;
 #[cfg(test)]
 mod tests;
 
-pub struct Lowering<'src> {
+pub fn lower(src: &str, ast: Ast) -> (Ir, Errors) {
+    Lowering::new(src, &ast).lower(ast)
+}
+
+struct Lowering<'src> {
     src: &'src str,
 
     ir: Ir,
@@ -25,28 +29,36 @@ pub struct Lowering<'src> {
 }
 
 impl<'src> Lowering<'src> {
-    pub fn new(src: &'src str) -> Self {
+    fn new(src: &'src str, ast: &Ast) -> Self {
         let mut s = Self {
             src,
 
-            ir: Ir::default(),
+            ir: Ir {
+                items: Vec::with_capacity(ast.items.len()),
+                stmts: Arena::with_capacity(ast.stmts.len()),
+                exprs: Arena::with_capacity(ast.exprs.len()),
+
+                symbols: Arena::new(),
+                types: Arena::new(),
+            },
             errors: Errors::new(),
 
             scope: Vec::new(),
         };
 
         // Builtin symbols:
-        _ = s.decl_sym(
+        let i32 = s.ir.types.push(Type::Type);
+        _ = s.bind_name(
             "i32",
             Sym {
-                kind: SymKind::Type,
+                kind: SymKind::Type(Some(i32)),
             },
         );
 
         s
     }
 
-    pub fn lower(mut self, ast: Ast) -> (Ir, Errors) {
+    fn lower(mut self, ast: Ast) -> (Ir, Errors) {
         for stmt in &ast.items {
             let stmt = self.lower_stmt(&ast, *stmt);
             self.ir.items.push(stmt);
@@ -99,8 +111,9 @@ impl<'src> Lowering<'src> {
                     .collect();
                 SymKind::Fn { params }
             }
+            ast::BindKind::Type => SymKind::Type(None),
             ast::BindKind::Infer => SymKind::Infer,
-            ast::BindKind::Type => SymKind::Type,
+            ast::BindKind::Invalid(_) => SymKind::Infer,
         };
 
         let rhs = bind.rhs.map(|rhs| self.lower_expr(ast, rhs));
@@ -110,7 +123,7 @@ impl<'src> Lowering<'src> {
         match ast.exprs[bind.lhs].kind {
             ast::ExprKind::Ident => {
                 let name = ast.exprs[bind.lhs].span.text(self.src);
-                let sym = self.decl_sym(name, Sym { kind });
+                let sym = self.bind_name(name, Sym { kind });
                 let lhs = self.lower_expr(ast, bind.lhs);
                 Bind { lhs, sym, rhs }
             }
@@ -159,7 +172,7 @@ impl<'src> Lowering<'src> {
             }
             ast::ExprKind::Ident => {
                 let ident = span.text(self.src);
-                match self.scope.iter().rfind(|(str, _)| ident == *str) {
+                match self.scope.iter().rfind(|(name, _)| ident == *name) {
                     Some((_, id)) => self.ir.exprs.push(Expr {
                         kind: ExprKind::Ident(*id),
                         span,
@@ -185,7 +198,7 @@ impl<'src> Lowering<'src> {
         }
     }
 
-    fn decl_sym(&mut self, name: &'src str, sym: Sym) -> Id<Sym> {
+    fn bind_name(&mut self, name: &'src str, sym: Sym) -> Id<Sym> {
         let sym = self.ir.symbols.push(sym);
         self.scope.push((name, sym));
         sym

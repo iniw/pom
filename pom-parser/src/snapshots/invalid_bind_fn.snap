@@ -64,8 +64,8 @@ expression: "test(\"f: fn (a: i32) = ;\")"
                         Id<Error>(0),
                     ),
                     span: Span {
-                        start: 15,
-                        end: 16,
+                        start: 17,
+                        end: 18,
                     },
                 },
             ],

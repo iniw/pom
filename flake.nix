@@ -5,15 +5,11 @@
   };
 
   outputs =
-    {
-      self,
-      nixpkgs,
-      flake-utils,
-    }:
-    flake-utils.lib.eachDefaultSystem (
+    inputs:
+    inputs.flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgs = import nixpkgs { inherit system; };
+        pkgs = import inputs.nixpkgs { inherit system; };
 
         rustToolchain = with pkgs; [
           cargo
@@ -27,15 +23,15 @@
         checks =
           let
             cargoCheck =
-              name: command: inputs:
+              name: command: buildInputs:
               pkgs.stdenv.mkDerivation {
                 inherit name;
-                src = self;
+                src = inputs.self;
 
                 # `cargoSetupHook` and `importCargoLock` allow fetching dependencies at build time, which some cargo commands (e.g: clippy) need to do.
                 # See: https://nixos.org/manual/nixpkgs/stable/#hooks
                 #      https://nixos.org/manual/nixpkgs/stable/#vendoring-of-dependencies
-                nativeBuildInputs = [ pkgs.rustPlatform.cargoSetupHook ] ++ inputs;
+                nativeBuildInputs = [ pkgs.rustPlatform.cargoSetupHook ] ++ buildInputs;
                 cargoDeps = pkgs.rustPlatform.importCargoLock {
                   lockFile = ./Cargo.lock;
                 };
@@ -49,11 +45,11 @@
               };
 
             simpleCheck =
-              name: command: inputs:
+              name: command: buildInputs:
               pkgs.stdenv.mkDerivation {
                 inherit name;
-                src = self;
-                nativeBuildInputs = inputs;
+                src = inputs.self;
+                nativeBuildInputs = buildInputs;
                 buildPhase = ''
                   ${command}
                   mkdir "$out"
@@ -82,7 +78,7 @@
 
           pom = pkgs.rustPlatform.buildRustPackage {
             name = "pom";
-            src = self;
+            src = inputs.self;
 
             cargoLock.lockFile = ./Cargo.lock;
 

@@ -3,7 +3,7 @@ use std::{
     slice::Iter,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Arena<T>(Vec<T>);
 
 impl<T> Arena<T> {
@@ -23,8 +23,8 @@ impl<T> Arena<T> {
     }
 
     #[inline]
-    pub fn next_id(&self) -> Id<T> {
-        Id::new(self.0.len() as u32)
+    pub fn len(&self) -> usize {
+        self.0.len()
     }
 
     #[inline]
