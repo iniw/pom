@@ -5,26 +5,28 @@ expression: "test(\"f: fn (a = 55;\")"
 (
     Ast {
         items: [
-            Id<Stmt>(0),
+            Id<Stmt>(1),
         ],
         stmts: Arena(
             [
                 Stmt {
                     kind: Bind(
                         Bind {
-                            lhs: Id<Expr>(0),
+                            lhs: Id<Expr>(1),
                             kind: Fn {
                                 params: [
                                     Bind {
-                                        lhs: Id<Expr>(1),
+                                        lhs: Id<Expr>(2),
                                         kind: Infer,
                                         rhs: Some(
-                                            Id<Expr>(2),
+                                            Id<Expr>(3),
                                         ),
                                     },
                                 ],
                             },
-                            rhs: None,
+                            rhs: Some(
+                                Id<Expr>(4),
+                            ),
                         },
                     ),
                     span: Span {
@@ -59,6 +61,15 @@ expression: "test(\"f: fn (a = 55;\")"
                     span: Span {
                         start: 11,
                         end: 13,
+                    },
+                },
+                Expr {
+                    kind: Invalid(
+                        Id<Error>(3),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 14,
                     },
                 },
             ],
@@ -101,6 +112,43 @@ expression: "test(\"f: fn (a = 55;\")"
                 span: Span {
                     start: 6,
                     end: 13,
+                },
+            },
+            Error {
+                kind: UnexpectedToken {
+                    wanted: [
+                        Equal,
+                        Semicolon,
+                    ],
+                    got: Token {
+                        kind: Eof,
+                        span: Span {
+                            start: 4294967295,
+                            end: 4294967295,
+                        },
+                    },
+                },
+                span: Span {
+                    start: 0,
+                    end: 14,
+                },
+            },
+            Error {
+                kind: UnexpectedToken {
+                    wanted: [
+                        Semicolon,
+                    ],
+                    got: Token {
+                        kind: Eof,
+                        span: Span {
+                            start: 4294967295,
+                            end: 4294967295,
+                        },
+                    },
+                },
+                span: Span {
+                    start: 0,
+                    end: 14,
                 },
             },
         ],

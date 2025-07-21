@@ -5,13 +5,13 @@ expression: "test(\"(\")"
 (
     Ast {
         items: [
-            Id<Stmt>(0),
+            Id<Stmt>(1),
         ],
         stmts: Arena(
             [
                 Stmt {
                     kind: Expr(
-                        Id<Expr>(1),
+                        Id<Expr>(2),
                     ),
                     span: Span {
                         start: 0,
@@ -24,7 +24,7 @@ expression: "test(\"(\")"
             [
                 Expr {
                     kind: Invalid(
-                        Id<Error>(0),
+                        Id<Error>(1),
                     ),
                     span: Span {
                         start: 0,
@@ -33,7 +33,7 @@ expression: "test(\"(\")"
                 },
                 Expr {
                     kind: Paren(
-                        Id<Expr>(0),
+                        Id<Expr>(1),
                     ),
                     span: Span {
                         start: 0,

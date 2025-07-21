@@ -5,13 +5,13 @@ expression: "test(\"{; 1 + 1;}\")"
 (
     Ast {
         items: [
-            Id<Stmt>(2),
+            Id<Stmt>(3),
         ],
         stmts: Arena(
             [
                 Stmt {
                     kind: Expr(
-                        Id<Expr>(0),
+                        Id<Expr>(1),
                     ),
                     span: Span {
                         start: 1,
@@ -20,7 +20,7 @@ expression: "test(\"{; 1 + 1;}\")"
                 },
                 Stmt {
                     kind: Expr(
-                        Id<Expr>(3),
+                        Id<Expr>(4),
                     ),
                     span: Span {
                         start: 3,
@@ -30,8 +30,8 @@ expression: "test(\"{; 1 + 1;}\")"
                 Stmt {
                     kind: Block(
                         [
-                            Id<Stmt>(0),
                             Id<Stmt>(1),
+                            Id<Stmt>(2),
                         ],
                     ),
                     span: Span {
@@ -45,11 +45,11 @@ expression: "test(\"{; 1 + 1;}\")"
             [
                 Expr {
                     kind: Invalid(
-                        Id<Error>(0),
+                        Id<Error>(1),
                     ),
                     span: Span {
-                        start: 0,
-                        end: 1,
+                        start: 1,
+                        end: 2,
                     },
                 },
                 Expr {
@@ -76,9 +76,9 @@ expression: "test(\"{; 1 + 1;}\")"
                 },
                 Expr {
                     kind: Binary {
-                        lhs: Id<Expr>(1),
+                        lhs: Id<Expr>(2),
                         op: Add,
-                        rhs: Id<Expr>(2),
+                        rhs: Id<Expr>(3),
                     },
                     span: Span {
                         start: 3,

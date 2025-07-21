@@ -1,0 +1,3 @@
+int: type = i32;
+succ: int = 100;
+fail: int = false;

@@ -1,4 +1,4 @@
-use pom_utils::{arena::Arena, span::Span};
+use pom_utils::span::Span;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Error {
@@ -12,4 +12,4 @@ pub enum ErrorKind {
     UnknownToken,
 }
 
-pub type Errors = Arena<Error>;
+pub type Errors = Vec<Error>;

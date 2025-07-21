@@ -5,18 +5,18 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := a;\n\"#)"
 (
     Ir {
         items: [
-            Id<Stmt>(2),
             Id<Stmt>(3),
+            Id<Stmt>(4),
         ],
         stmts: Arena(
             [
                 Stmt {
                     kind: Bind(
                         Bind {
-                            lhs: Id<Expr>(1),
-                            sym: Id<Sym>(1),
+                            sym: Id<Sym>(2),
+                            lhs: Id<Expr>(2),
                             rhs: Some(
-                                Id<Expr>(0),
+                                Id<Expr>(1),
                             ),
                         },
                     ),
@@ -28,10 +28,10 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := a;\n\"#)"
                 Stmt {
                     kind: Bind(
                         Bind {
-                            lhs: Id<Expr>(5),
-                            sym: Id<Sym>(2),
+                            sym: Id<Sym>(3),
+                            lhs: Id<Expr>(6),
                             rhs: Some(
-                                Id<Expr>(4),
+                                Id<Expr>(5),
                             ),
                         },
                     ),
@@ -43,8 +43,8 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := a;\n\"#)"
                 Stmt {
                     kind: Block(
                         [
-                            Id<Stmt>(0),
                             Id<Stmt>(1),
+                            Id<Stmt>(2),
                         ],
                     ),
                     span: Span {
@@ -55,10 +55,10 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := a;\n\"#)"
                 Stmt {
                     kind: Bind(
                         Bind {
-                            lhs: Id<Expr>(7),
-                            sym: Id<Sym>(3),
+                            sym: Id<Sym>(4),
+                            lhs: Id<Expr>(8),
                             rhs: Some(
-                                Id<Expr>(6),
+                                Id<Expr>(7),
                             ),
                         },
                     ),
@@ -84,7 +84,7 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := a;\n\"#)"
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(1),
+                        Id<Sym>(2),
                     ),
                     span: Span {
                         start: 7,
@@ -93,7 +93,7 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := a;\n\"#)"
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(1),
+                        Id<Sym>(2),
                     ),
                     span: Span {
                         start: 25,
@@ -102,7 +102,7 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := a;\n\"#)"
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(1),
+                        Id<Sym>(2),
                     ),
                     span: Span {
                         start: 29,
@@ -111,9 +111,9 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := a;\n\"#)"
                 },
                 Expr {
                     kind: Binary {
-                        lhs: Id<Expr>(2),
+                        lhs: Id<Expr>(3),
                         op: Add,
-                        rhs: Id<Expr>(3),
+                        rhs: Id<Expr>(4),
                     },
                     span: Span {
                         start: 25,
@@ -122,7 +122,7 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := a;\n\"#)"
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(2),
+                        Id<Sym>(3),
                     ),
                     span: Span {
                         start: 20,
@@ -131,7 +131,7 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := a;\n\"#)"
                 },
                 Expr {
                     kind: Invalid(
-                        Id<Error>(0),
+                        Id<Error>(1),
                     ),
                     span: Span {
                         start: 39,
@@ -140,7 +140,7 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := a;\n\"#)"
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(3),
+                        Id<Sym>(4),
                     ),
                     span: Span {
                         start: 34,
@@ -152,7 +152,11 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := a;\n\"#)"
         symbols: Arena(
             [
                 Sym {
-                    kind: Type,
+                    kind: Type(
+                        Some(
+                            Id<Type>(1),
+                        ),
+                    ),
                 },
                 Sym {
                     kind: Infer,
@@ -165,6 +169,18 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := a;\n\"#)"
                 },
             ],
         ),
+        types: Arena(
+            [
+                Type,
+                Type,
+                Type,
+            ],
+        ),
+        builtins: Builtins {
+            i32: Id<Type>(1),
+            f32: Id<Type>(2),
+            bool: Id<Type>(3),
+        },
     },
     Arena(
         [

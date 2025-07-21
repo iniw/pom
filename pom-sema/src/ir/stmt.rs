@@ -17,9 +17,9 @@ pub enum StmtKind {
     Expr(Id<Expr>),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Bind {
-    pub lhs: Id<Expr>,
     pub sym: Id<Sym>,
+    pub lhs: Id<Expr>,
     pub rhs: Option<Id<Expr>>,
 }

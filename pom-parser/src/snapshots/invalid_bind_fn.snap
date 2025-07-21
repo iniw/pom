@@ -5,27 +5,27 @@ expression: "test(\"f: fn (a: i32) = ;\")"
 (
     Ast {
         items: [
-            Id<Stmt>(0),
+            Id<Stmt>(1),
         ],
         stmts: Arena(
             [
                 Stmt {
                     kind: Bind(
                         Bind {
-                            lhs: Id<Expr>(0),
+                            lhs: Id<Expr>(1),
                             kind: Fn {
                                 params: [
                                     Bind {
-                                        lhs: Id<Expr>(1),
+                                        lhs: Id<Expr>(2),
                                         kind: Expr(
-                                            Id<Expr>(2),
+                                            Id<Expr>(3),
                                         ),
                                         rhs: None,
                                     },
                                 ],
                             },
                             rhs: Some(
-                                Id<Expr>(3),
+                                Id<Expr>(4),
                             ),
                         },
                     ),
@@ -61,11 +61,11 @@ expression: "test(\"f: fn (a: i32) = ;\")"
                 },
                 Expr {
                     kind: Invalid(
-                        Id<Error>(0),
+                        Id<Error>(1),
                     ),
                     span: Span {
-                        start: 15,
-                        end: 16,
+                        start: 17,
+                        end: 18,
                     },
                 },
             ],

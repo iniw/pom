@@ -1,19 +1,15 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs =
-    {
-      self,
-      nixpkgs,
-      flake-utils,
-    }:
-    flake-utils.lib.eachDefaultSystem (
+    inputs:
+    inputs.flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgs = import nixpkgs { inherit system; };
+        pkgs = import inputs.nixpkgs { inherit system; };
 
         rustToolchain = with pkgs; [
           cargo
@@ -26,48 +22,70 @@
       {
         checks =
           let
-            cargoCheck =
-              name: command: inputs:
-              pkgs.stdenv.mkDerivation {
-                inherit name;
-                src = self;
+            simpleCheck =
+              {
+                name,
+                command,
+                packages,
+              }:
+              {
+                ${name} = pkgs.stdenv.mkDerivation {
+                  inherit name;
+                  src = inputs.self;
 
-                # `cargoSetupHook` and `importCargoLock` allow fetching dependencies at build time, which some cargo commands (e.g: clippy) need to do.
-                # See: https://nixos.org/manual/nixpkgs/stable/#hooks
-                #      https://nixos.org/manual/nixpkgs/stable/#vendoring-of-dependencies
-                nativeBuildInputs = [ pkgs.rustPlatform.cargoSetupHook ] ++ inputs;
-                cargoDeps = pkgs.rustPlatform.importCargoLock {
-                  lockFile = ./Cargo.lock;
+                  nativeBuildInputs = packages;
+
+                  buildPhase = ''
+                    ${command}
+                    touch $out
+                  '';
                 };
-
-                # Manually create the $out folder to make the derivation build successfully - nix derivations must produce an output.
-                # See: https://github.com/NixOS/nixpkgs/issues/16182
-                buildPhase = ''
-                  ${command}
-                  mkdir "$out"
-                '';
               };
 
-            simpleCheck =
-              name: command: inputs:
-              pkgs.stdenv.mkDerivation {
-                inherit name;
-                src = self;
-                nativeBuildInputs = inputs;
-                buildPhase = ''
-                  ${command}
-                  mkdir "$out"
-                '';
+            cargoCheck =
+              {
+                name,
+                command,
+                packages,
+              }:
+              {
+                ${name} = pkgs.stdenv.mkDerivation {
+                  inherit name;
+                  src = inputs.self;
+
+                  # `cargoSetupHook` and `importCargoLock` allow fetching dependencies at build time, which some cargo commands (e.g: clippy) need to do.
+                  # See: https://nixos.org/manual/nixpkgs/stable/#hooks
+                  #      https://nixos.org/manual/nixpkgs/stable/#vendoring-of-dependencies
+                  nativeBuildInputs = packages ++ [ pkgs.rustPlatform.cargoSetupHook ];
+                  cargoDeps = pkgs.rustPlatform.importCargoLock {
+                    lockFile = ./Cargo.lock;
+                  };
+
+                  buildPhase = ''
+                    ${command}
+                    touch $out
+                  '';
+                };
               };
           in
-          {
-            format = cargoCheck "format" "cargo fmt --check" [ rustToolchain ];
-            lint = cargoCheck "lint" "cargo clippy -- -Dwarnings" [ rustToolchain ];
-            test = cargoCheck "test" "cargo insta test" [
-              rustToolchain
-              pkgs.cargo-insta
-            ];
-            typos = simpleCheck "typos" "typos" [ pkgs.typos ];
+          simpleCheck {
+            name = "typos";
+            command = "typos";
+            packages = [ pkgs.typos ];
+          }
+          // cargoCheck {
+            name = "format";
+            command = "cargo fmt --check";
+            packages = rustToolchain;
+          }
+          // cargoCheck {
+            # Lint and test in the same check to reuse the compiler cache.
+            name = "lint+test";
+            command = ''
+              cargo clippy -- -Dwarnings
+              cargo insta test
+            '';
+            packages = rustToolchain ++ [ pkgs.cargo-insta ];
           };
 
         devShells.default = pkgs.mkShell {
@@ -82,7 +100,7 @@
 
           pom = pkgs.rustPlatform.buildRustPackage {
             name = "pom";
-            src = self;
+            src = inputs.self;
 
             cargoLock.lockFile = ./Cargo.lock;
 

@@ -2,23 +2,23 @@ use pom_parser::ast::Ast;
 
 use crate::{
     ir::Ir,
-    lowering::{Lowering, error::Errors},
-    typecheck::TypeChecking,
+    lowering::{error::Errors, lower},
+    typecheck::typecheck,
 };
 
 pub mod ir;
-pub mod lowering;
-pub mod typecheck;
+mod lowering;
+mod typecheck;
 
 pub fn analyse(src: &str, ast: Ast) -> (Ir, Errors) {
-    let (mut ir, errors) = Lowering::new(src).lower(ast);
+    let (mut ir, errors) = lower(src, ast);
 
-    TypeChecking::new().check(&mut ir);
+    typecheck(&mut ir);
 
     (ir, errors)
 }
 
-pub mod ast {
+mod ast {
     use pom_parser::ast::{expr, stmt};
 
     pub type Bind = stmt::Bind;

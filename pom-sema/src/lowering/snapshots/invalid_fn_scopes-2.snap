@@ -5,19 +5,19 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
 (
     Ir {
         items: [
-            Id<Stmt>(1),
             Id<Stmt>(2),
             Id<Stmt>(3),
+            Id<Stmt>(4),
         ],
         stmts: Arena(
             [
                 Stmt {
                     kind: Bind(
                         Bind {
-                            lhs: Id<Expr>(5),
-                            sym: Id<Sym>(2),
+                            sym: Id<Sym>(3),
+                            lhs: Id<Expr>(6),
                             rhs: Some(
-                                Id<Expr>(4),
+                                Id<Expr>(5),
                             ),
                         },
                     ),
@@ -29,10 +29,10 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
                 Stmt {
                     kind: Bind(
                         Bind {
-                            lhs: Id<Expr>(7),
-                            sym: Id<Sym>(3),
+                            sym: Id<Sym>(4),
+                            lhs: Id<Expr>(8),
                             rhs: Some(
-                                Id<Expr>(6),
+                                Id<Expr>(7),
                             ),
                         },
                     ),
@@ -44,10 +44,10 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
                 Stmt {
                     kind: Bind(
                         Bind {
-                            lhs: Id<Expr>(9),
-                            sym: Id<Sym>(4),
+                            sym: Id<Sym>(5),
+                            lhs: Id<Expr>(10),
                             rhs: Some(
-                                Id<Expr>(8),
+                                Id<Expr>(9),
                             ),
                         },
                     ),
@@ -59,10 +59,10 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
                 Stmt {
                     kind: Bind(
                         Bind {
-                            lhs: Id<Expr>(11),
-                            sym: Id<Sym>(5),
+                            sym: Id<Sym>(6),
+                            lhs: Id<Expr>(12),
                             rhs: Some(
-                                Id<Expr>(10),
+                                Id<Expr>(11),
                             ),
                         },
                     ),
@@ -77,7 +77,7 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
             [
                 Expr {
                     kind: Ident(
-                        Id<Sym>(0),
+                        Id<Sym>(1),
                     ),
                     span: Span {
                         start: 11,
@@ -86,7 +86,7 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(1),
+                        Id<Sym>(2),
                     ),
                     span: Span {
                         start: 8,
@@ -95,7 +95,7 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(1),
+                        Id<Sym>(2),
                     ),
                     span: Span {
                         start: 29,
@@ -104,7 +104,7 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(1),
+                        Id<Sym>(2),
                     ),
                     span: Span {
                         start: 33,
@@ -113,9 +113,9 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
                 },
                 Expr {
                     kind: Binary {
-                        lhs: Id<Expr>(2),
+                        lhs: Id<Expr>(3),
                         op: Add,
-                        rhs: Id<Expr>(3),
+                        rhs: Id<Expr>(4),
                     },
                     span: Span {
                         start: 29,
@@ -124,7 +124,7 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(2),
+                        Id<Sym>(3),
                     ),
                     span: Span {
                         start: 24,
@@ -134,7 +134,7 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
                 Expr {
                     kind: Block(
                         [
-                            Id<Stmt>(0),
+                            Id<Stmt>(1),
                         ],
                     ),
                     span: Span {
@@ -144,7 +144,7 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(3),
+                        Id<Sym>(4),
                     ),
                     span: Span {
                         start: 1,
@@ -153,7 +153,7 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
                 },
                 Expr {
                     kind: Invalid(
-                        Id<Error>(0),
+                        Id<Error>(1),
                     ),
                     span: Span {
                         start: 45,
@@ -162,7 +162,7 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(4),
+                        Id<Sym>(5),
                     ),
                     span: Span {
                         start: 40,
@@ -171,7 +171,7 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
                 },
                 Expr {
                     kind: Invalid(
-                        Id<Error>(1),
+                        Id<Error>(2),
                     ),
                     span: Span {
                         start: 53,
@@ -180,7 +180,7 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(5),
+                        Id<Sym>(6),
                     ),
                     span: Span {
                         start: 48,
@@ -192,11 +192,15 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
         symbols: Arena(
             [
                 Sym {
-                    kind: Type,
+                    kind: Type(
+                        Some(
+                            Id<Type>(1),
+                        ),
+                    ),
                 },
                 Sym {
                     kind: Expr(
-                        Id<Expr>(0),
+                        Id<Expr>(1),
                     ),
                 },
                 Sym {
@@ -206,8 +210,8 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
                     kind: Fn {
                         params: [
                             Bind {
-                                lhs: Id<Expr>(1),
-                                sym: Id<Sym>(1),
+                                sym: Id<Sym>(2),
+                                lhs: Id<Expr>(2),
                                 rhs: None,
                             },
                         ],
@@ -221,6 +225,18 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
                 },
             ],
         ),
+        types: Arena(
+            [
+                Type,
+                Type,
+                Type,
+            ],
+        ),
+        builtins: Builtins {
+            i32: Id<Type>(1),
+            f32: Id<Type>(2),
+            bool: Id<Type>(3),
+        },
     },
     Arena(
         [

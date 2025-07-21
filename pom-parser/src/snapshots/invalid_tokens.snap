@@ -5,16 +5,16 @@ expression: "test(\"55 ^ $ 47\")"
 (
     Ast {
         items: [
-            Id<Stmt>(0),
             Id<Stmt>(1),
             Id<Stmt>(2),
             Id<Stmt>(3),
+            Id<Stmt>(4),
         ],
         stmts: Arena(
             [
                 Stmt {
                     kind: Expr(
-                        Id<Expr>(0),
+                        Id<Expr>(1),
                     ),
                     span: Span {
                         start: 0,
@@ -23,7 +23,7 @@ expression: "test(\"55 ^ $ 47\")"
                 },
                 Stmt {
                     kind: Expr(
-                        Id<Expr>(1),
+                        Id<Expr>(2),
                     ),
                     span: Span {
                         start: 3,
@@ -32,7 +32,7 @@ expression: "test(\"55 ^ $ 47\")"
                 },
                 Stmt {
                     kind: Expr(
-                        Id<Expr>(2),
+                        Id<Expr>(3),
                     ),
                     span: Span {
                         start: 5,
@@ -41,7 +41,7 @@ expression: "test(\"55 ^ $ 47\")"
                 },
                 Stmt {
                     kind: Expr(
-                        Id<Expr>(3),
+                        Id<Expr>(4),
                     ),
                     span: Span {
                         start: 7,
@@ -65,20 +65,20 @@ expression: "test(\"55 ^ $ 47\")"
                 },
                 Expr {
                     kind: Invalid(
-                        Id<Error>(1),
-                    ),
-                    span: Span {
-                        start: 0,
-                        end: 2,
-                    },
-                },
-                Expr {
-                    kind: Invalid(
                         Id<Error>(2),
                     ),
                     span: Span {
                         start: 3,
                         end: 4,
+                    },
+                },
+                Expr {
+                    kind: Invalid(
+                        Id<Error>(3),
+                    ),
+                    span: Span {
+                        start: 5,
+                        end: 6,
                     },
                 },
                 Expr {
