@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 pom-lexer = { path = "../pom-lexer" }
 pom-utils = { path = "../pom-utils" }
-smallvec = "1.15.1"
 
 [dev-dependencies]
 pom-utils = { path = "../pom-utils", features = ["snap"] }

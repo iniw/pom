@@ -5,13 +5,13 @@ expression: "test(\"{55 + 47\")"
 (
     Ast {
         items: [
-            Id<Stmt>(1),
+            Id<Stmt>(2),
         ],
         stmts: Arena(
             [
                 Stmt {
                     kind: Expr(
-                        Id<Expr>(2),
+                        Id<Expr>(3),
                     ),
                     span: Span {
                         start: 1,
@@ -21,7 +21,7 @@ expression: "test(\"{55 + 47\")"
                 Stmt {
                     kind: Block(
                         [
-                            Id<Stmt>(0),
+                            Id<Stmt>(1),
                         ],
                     ),
                     span: Span {
@@ -57,9 +57,9 @@ expression: "test(\"{55 + 47\")"
                 },
                 Expr {
                     kind: Binary {
-                        lhs: Id<Expr>(0),
+                        lhs: Id<Expr>(1),
                         op: Add,
-                        rhs: Id<Expr>(1),
+                        rhs: Id<Expr>(2),
                     },
                     span: Span {
                         start: 1,

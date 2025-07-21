@@ -30,21 +30,21 @@ fn run(src: &str, debug: bool) {
     let (tokens, errors) = lex(src);
 
     if debug {
-        println!("[LEXER] Tokens: {:#?}", tokens);
-        println!("[LEXER] Errors: {:#?}", errors);
+        println!("[LEXER] Tokens: {tokens:#?}");
+        println!("[LEXER] Errors: {errors:#?}");
     }
 
     let (ast, errors) = parse(src, tokens);
 
     if debug {
-        println!("[PARSER] Ast: {:#?}", ast);
-        println!("[PARSER] Errors: {:#?}", errors);
+        println!("[PARSER] Ast: {ast:#?}");
+        println!("[PARSER] Errors: {errors:#?}");
     }
 
     let (ir, errors) = analyse(src, ast);
     if debug {
-        println!("[SEMA] Ir: {:#?}", ir);
-        println!("[SEMA] Errors: {:#?}", errors);
+        println!("[SEMA] Ir: {ir:#?}");
+        println!("[SEMA] Errors: {errors:#?}");
     }
 }
 

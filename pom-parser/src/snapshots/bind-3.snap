@@ -5,19 +5,19 @@ expression: "test(\"var: u32 = 47;\")"
 (
     Ast {
         items: [
-            Id<Stmt>(0),
+            Id<Stmt>(1),
         ],
         stmts: Arena(
             [
                 Stmt {
                     kind: Bind(
                         Bind {
-                            lhs: Id<Expr>(0),
+                            lhs: Id<Expr>(1),
                             kind: Expr(
-                                Id<Expr>(1),
+                                Id<Expr>(2),
                             ),
                             rhs: Some(
-                                Id<Expr>(2),
+                                Id<Expr>(3),
                             ),
                         },
                     ),

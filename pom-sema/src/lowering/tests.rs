@@ -4,13 +4,13 @@ use pom_utils::snap;
 
 use crate::{
     ir::Ir,
-    lowering::{Lowering, error::Errors},
+    lowering::{error::Errors, lower},
 };
 
 fn test(src: &str) -> (Ir, Errors) {
     let (tokens, _) = lex(src);
     let (ast, _) = parse(src, tokens);
-    Lowering::new(src).lower(ast)
+    lower(src, ast)
 }
 
 #[test]
@@ -30,6 +30,10 @@ b := a + a;
 a := 55;
 "#
     ));
+}
+
+#[test]
+fn invalid_scopes() {
     snap!(test(
         r#"
 {

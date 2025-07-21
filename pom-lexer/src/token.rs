@@ -86,5 +86,27 @@ pub enum TokenKind {
 pub type Tokens = Vec<Token>;
 
 // This should be as tiny as possible.
-// Increasing the size of this enum increases the size of several things throughout the compiler.
+// Increasing the size of this enum increases the size of several things throughout the parser.
 const_assert_eq!(std::mem::size_of::<TokenKind>(), 1);
+
+pub trait TokenExt {
+    type Output;
+
+    fn kind(self) -> Self::Output;
+}
+
+impl<E> TokenExt for Result<Token, E> {
+    type Output = Result<TokenKind, E>;
+
+    fn kind(self) -> Self::Output {
+        self.map(|token| token.kind)
+    }
+}
+
+impl TokenExt for Option<Token> {
+    type Output = Option<TokenKind>;
+
+    fn kind(self) -> Self::Output {
+        self.map(|token| token.kind)
+    }
+}

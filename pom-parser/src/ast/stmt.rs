@@ -17,17 +17,18 @@ pub enum StmtKind {
     Expr(Id<Expr>),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Bind {
     pub lhs: Id<Expr>,
     pub kind: BindKind,
     pub rhs: Option<Id<Expr>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum BindKind {
     Expr(Id<Expr>),
     Fn { params: Vec<Bind> },
-    Infer,
     Type,
+
+    Infer,
 }

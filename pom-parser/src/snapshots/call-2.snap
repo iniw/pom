@@ -5,13 +5,13 @@ expression: "test(\"f(55);\")"
 (
     Ast {
         items: [
-            Id<Stmt>(0),
+            Id<Stmt>(1),
         ],
         stmts: Arena(
             [
                 Stmt {
                     kind: Expr(
-                        Id<Expr>(2),
+                        Id<Expr>(3),
                     ),
                     span: Span {
                         start: 0,
@@ -42,9 +42,9 @@ expression: "test(\"f(55);\")"
                 },
                 Expr {
                     kind: Call {
-                        callable: Id<Expr>(0),
+                        callable: Id<Expr>(1),
                         args: [
-                            Id<Expr>(1),
+                            Id<Expr>(2),
                         ],
                     },
                     span: Span {

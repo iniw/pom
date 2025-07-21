@@ -5,27 +5,27 @@ expression: "test(\"f: fn (x = 55) = x;\")"
 (
     Ast {
         items: [
-            Id<Stmt>(0),
+            Id<Stmt>(1),
         ],
         stmts: Arena(
             [
                 Stmt {
                     kind: Bind(
                         Bind {
-                            lhs: Id<Expr>(0),
+                            lhs: Id<Expr>(1),
                             kind: Fn {
                                 params: [
                                     Bind {
-                                        lhs: Id<Expr>(1),
+                                        lhs: Id<Expr>(2),
                                         kind: Infer,
                                         rhs: Some(
-                                            Id<Expr>(2),
+                                            Id<Expr>(3),
                                         ),
                                     },
                                 ],
                             },
                             rhs: Some(
-                                Id<Expr>(3),
+                                Id<Expr>(4),
                             ),
                         },
                     ),

@@ -5,7 +5,7 @@ expression: "test(\"{}\")"
 (
     Ast {
         items: [
-            Id<Stmt>(0),
+            Id<Stmt>(1),
         ],
         stmts: Arena(
             [

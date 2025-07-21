@@ -5,17 +5,17 @@ expression: "test(\"var := 55;\")"
 (
     Ast {
         items: [
-            Id<Stmt>(0),
+            Id<Stmt>(1),
         ],
         stmts: Arena(
             [
                 Stmt {
                     kind: Bind(
                         Bind {
-                            lhs: Id<Expr>(0),
+                            lhs: Id<Expr>(1),
                             kind: Infer,
                             rhs: Some(
-                                Id<Expr>(1),
+                                Id<Expr>(2),
                             ),
                         },
                     ),
