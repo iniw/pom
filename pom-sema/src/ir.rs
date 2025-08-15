@@ -10,9 +10,9 @@ pub mod stmt;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Builtins {
+    pub bool: Id<Type>,
     pub i32: Id<Type>,
     pub f32: Id<Type>,
-    pub bool: Id<Type>,
 }
 
 #[derive(Debug, PartialEq)]

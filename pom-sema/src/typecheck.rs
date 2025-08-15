@@ -90,9 +90,9 @@ impl TypeChecker {
                 _ => todo!(),
             },
             ExprKind::Literal(literal) => match literal {
-                ast::Literal::Int(_) => Some(builtins.i32),
                 ast::Literal::Bool(_) => Some(builtins.bool),
-                _ => todo!(),
+                ast::Literal::Int(_) => Some(builtins.i32),
+                ast::Literal::Float(_) => Some(builtins.f32),
             },
             _ => todo!(),
         }

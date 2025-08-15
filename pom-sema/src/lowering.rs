@@ -33,9 +33,9 @@ impl<'src> Lowerer<'src> {
         let mut types = Arena::new();
 
         let builtins = Builtins {
+            bool: types.push(Type {}),
             i32: types.push(Type {}),
             f32: types.push(Type {}),
-            bool: types.push(Type {}),
         };
 
         let mut lowerer = Self {
@@ -57,9 +57,21 @@ impl<'src> Lowerer<'src> {
         };
 
         _ = lowerer.bind_name(
+            "bool",
+            Sym {
+                kind: SymKind::Type(Some(lowerer.ir.builtins.bool)),
+            },
+        );
+        _ = lowerer.bind_name(
             "i32",
             Sym {
                 kind: SymKind::Type(Some(lowerer.ir.builtins.i32)),
+            },
+        );
+        _ = lowerer.bind_name(
+            "f32",
+            Sym {
+                kind: SymKind::Type(Some(lowerer.ir.builtins.f32)),
             },
         );
 
