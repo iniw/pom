@@ -79,16 +79,16 @@
             command = "cargo fmt --check";
           }
           // cargoCheck {
-            # Lint and test in the same check to reuse the compiler cache.
-            name = "lint+test";
-            command = ''
-              cargo clippy -- -Dwarnings
-              cargo insta test
-            '';
+            name = "lint";
+            command = "cargo clippy -- -Dwarnings";
+          }
+          // cargoCheck {
+            name = "test";
+            command = "cargo insta test";
           };
 
         devShells.default = pkgs.mkShell {
-          packages = rustToolchain ++ [ pkgs.typos ];
+          packages = rustToolchain;
         };
 
         packages = rec {
