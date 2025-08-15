@@ -12,7 +12,7 @@ expression: "test(r#\"\na: fn (a: i32) = {\n    b := a + a;\n};\n\"#)"
                 Stmt {
                     kind: Bind(
                         Bind {
-                            sym: Id<Sym>(3),
+                            sym: Id<Sym>(5),
                             lhs: Id<Expr>(6),
                             rhs: Some(
                                 Id<Expr>(5),
@@ -27,7 +27,7 @@ expression: "test(r#\"\na: fn (a: i32) = {\n    b := a + a;\n};\n\"#)"
                 Stmt {
                     kind: Bind(
                         Bind {
-                            sym: Id<Sym>(4),
+                            sym: Id<Sym>(6),
                             lhs: Id<Expr>(8),
                             rhs: Some(
                                 Id<Expr>(7),
@@ -45,7 +45,7 @@ expression: "test(r#\"\na: fn (a: i32) = {\n    b := a + a;\n};\n\"#)"
             [
                 Expr {
                     kind: Ident(
-                        Id<Sym>(1),
+                        Id<Sym>(2),
                     ),
                     span: Span {
                         start: 11,
@@ -54,7 +54,7 @@ expression: "test(r#\"\na: fn (a: i32) = {\n    b := a + a;\n};\n\"#)"
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(2),
+                        Id<Sym>(4),
                     ),
                     span: Span {
                         start: 8,
@@ -63,7 +63,7 @@ expression: "test(r#\"\na: fn (a: i32) = {\n    b := a + a;\n};\n\"#)"
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(2),
+                        Id<Sym>(4),
                     ),
                     span: Span {
                         start: 29,
@@ -72,7 +72,7 @@ expression: "test(r#\"\na: fn (a: i32) = {\n    b := a + a;\n};\n\"#)"
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(2),
+                        Id<Sym>(4),
                     ),
                     span: Span {
                         start: 33,
@@ -92,7 +92,7 @@ expression: "test(r#\"\na: fn (a: i32) = {\n    b := a + a;\n};\n\"#)"
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(3),
+                        Id<Sym>(5),
                     ),
                     span: Span {
                         start: 24,
@@ -112,7 +112,7 @@ expression: "test(r#\"\na: fn (a: i32) = {\n    b := a + a;\n};\n\"#)"
                 },
                 Expr {
                     kind: Ident(
-                        Id<Sym>(4),
+                        Id<Sym>(6),
                     ),
                     span: Span {
                         start: 1,
@@ -123,31 +123,35 @@ expression: "test(r#\"\na: fn (a: i32) = {\n    b := a + a;\n};\n\"#)"
         ),
         symbols: Arena(
             [
-                Sym {
-                    kind: Type(
-                        Some(
-                            Id<Type>(1),
-                        ),
+                Type(
+                    Some(
+                        Id<Type>(1),
                     ),
-                },
-                Sym {
-                    kind: Expr(
-                        Id<Expr>(1),
+                ),
+                Type(
+                    Some(
+                        Id<Type>(2),
                     ),
-                },
-                Sym {
-                    kind: Infer,
-                },
-                Sym {
-                    kind: Fn {
-                        params: [
-                            Bind {
-                                sym: Id<Sym>(2),
-                                lhs: Id<Expr>(2),
-                                rhs: None,
-                            },
-                        ],
-                    },
+                ),
+                Type(
+                    Some(
+                        Id<Type>(3),
+                    ),
+                ),
+                Expr(
+                    Id<Expr>(1),
+                ),
+                Infer(
+                    None,
+                ),
+                Fn {
+                    params: [
+                        Bind {
+                            sym: Id<Sym>(4),
+                            lhs: Id<Expr>(2),
+                            rhs: None,
+                        },
+                    ],
                 },
             ],
         ),
@@ -159,9 +163,9 @@ expression: "test(r#\"\na: fn (a: i32) = {\n    b := a + a;\n};\n\"#)"
             ],
         ),
         builtins: Builtins {
-            i32: Id<Type>(1),
-            f32: Id<Type>(2),
-            bool: Id<Type>(3),
+            bool: Id<Type>(1),
+            i32: Id<Type>(2),
+            f32: Id<Type>(3),
         },
     },
     Arena(

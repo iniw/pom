@@ -3,24 +3,31 @@ use pom_utils::arena::{Arena, Id};
 use crate::{
     ast,
     ir::{
-        Builtins, Ir, Sym, SymKind, Type,
+        Builtins, Ir, Sym, Type,
         expr::{Expr, ExprKind},
         stmt::{Bind, Stmt, StmtKind},
     },
+    typecheck::error::{Error, ErrorKind, Errors},
 };
 
-pub fn typecheck(ir: &mut Ir) {
-    TypeChecker::new().check(ir);
+pub fn typecheck(ir: &mut Ir) -> Errors {
+    TypeChecker::new().check(ir)
 }
 
-struct TypeChecker {}
+pub mod error;
+
+struct TypeChecker {
+    errors: Errors,
+}
 
 impl TypeChecker {
     fn new() -> Self {
-        Self {}
+        Self {
+            errors: Errors::new(),
+        }
     }
 
-    fn check(mut self, ir: &mut Ir) {
+    fn check(mut self, ir: &mut Ir) -> Errors {
         let Ir {
             items,
             stmts,
@@ -35,6 +42,8 @@ impl TypeChecker {
         for stmt in items {
             self.check_stmt(stmts, exprs, symbols, builtins, *stmt);
         }
+
+        self.errors
     }
 
     fn check_stmt(
@@ -66,27 +75,31 @@ impl TypeChecker {
 
         let rhs_ty = self.check_expr(stmts, exprs, symbols, builtins, rhs);
 
-        match symbols[bind.sym].kind {
-            SymKind::Type(ref mut ty) => Self::check_type(ty, rhs_ty),
-            SymKind::Expr(expr) => {
-                let mut kind_ty = self.check_expr(stmts, exprs, symbols, builtins, expr);
-                Self::check_type(&mut kind_ty, rhs_ty);
+        match symbols[bind.sym] {
+            Sym::Expr(expr) => {
+                let kind_ty = self.check_expr(stmts, exprs, symbols, builtins, expr);
+                self.check_type(kind_ty, rhs_ty);
             }
+            Sym::Type(ref mut ty) => *ty = self.check_type(*ty, rhs_ty),
+            Sym::Infer(ref mut ty) => *ty = rhs_ty,
             _ => todo!(),
         }
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn check_expr(
         &mut self,
-        _stmts: &mut Arena<Stmt>,
+        stmts: &mut Arena<Stmt>,
         exprs: &mut Arena<Expr>,
         symbols: &Arena<Sym>,
         builtins: &Builtins,
         expr: Id<Expr>,
     ) -> Option<Id<Type>> {
         match exprs[expr].kind {
-            ExprKind::Ident(sym) => match symbols[sym].kind {
-                SymKind::Type(ty) => ty,
+            ExprKind::Ident(sym) => match symbols[sym] {
+                Sym::Type(ty) => ty,
+                Sym::Infer(ty) => ty,
+                Sym::Expr(expr) => self.check_expr(stmts, exprs, symbols, builtins, expr),
                 _ => todo!(),
             },
             ExprKind::Literal(literal) => match literal {
@@ -98,11 +111,23 @@ impl TypeChecker {
         }
     }
 
-    fn check_type(checked: &mut Option<Id<Type>>, ty: Option<Id<Type>>) {
-        match (&checked, ty) {
-            (Some(checked), Some(ty)) => assert_eq!(*checked, ty),
-            (None, ty) => *checked = ty,
-            (Some(_), None) => (),
+    fn check_type(&mut self, checking: Option<Id<Type>>, ty: Option<Id<Type>>) -> Option<Id<Type>> {
+        match (checking, ty) {
+            (Some(checking), Some(ty)) => {
+                if checking == ty {
+                    Some(ty)
+                } else {
+                    self.errors.push(Error {
+                        kind: ErrorKind::MismatchedTypes {
+                            wanted: ty,
+                            got: checking,
+                        },
+                    });
+                    None
+                }
+            }
+            (None, ty) => ty,
+            (Some(_), None) => None,
         }
     }
 }
