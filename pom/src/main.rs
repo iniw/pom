@@ -41,10 +41,12 @@ fn run(src: &str, debug: bool) {
         println!("[PARSER] Errors: {errors:#?}");
     }
 
-    let (ir, errors) = analyse(src, ast);
+    let (ir, lowering_errors, typecheck_errors) = analyse(src, ast);
+
     if debug {
         println!("[SEMA] Ir: {ir:#?}");
-        println!("[SEMA] Errors: {errors:#?}");
+        println!("[SEMA] Lowering errors: {lowering_errors:#?}");
+        println!("[SEMA] Typecheck errors: {typecheck_errors:#?}");
     }
 }
 

@@ -17,6 +17,8 @@
           rust-analyzer
           rustc
           rustfmt
+          # Better DX when running and reviewing the snapshot tests.
+          cargo-insta
         ];
       in
       {
@@ -46,7 +48,6 @@
               {
                 name,
                 command,
-                packages,
               }:
               {
                 ${name} = pkgs.stdenv.mkDerivation {
@@ -56,7 +57,7 @@
                   # `cargoSetupHook` and `importCargoLock` allow fetching dependencies at build time, which some cargo commands (e.g: clippy) need to do.
                   # See: https://nixos.org/manual/nixpkgs/stable/#hooks
                   #      https://nixos.org/manual/nixpkgs/stable/#vendoring-of-dependencies
-                  nativeBuildInputs = packages ++ [ pkgs.rustPlatform.cargoSetupHook ];
+                  nativeBuildInputs = rustToolchain ++ [ pkgs.rustPlatform.cargoSetupHook ];
                   cargoDeps = pkgs.rustPlatform.importCargoLock {
                     lockFile = ./Cargo.lock;
                   };
@@ -76,7 +77,6 @@
           // cargoCheck {
             name = "format";
             command = "cargo fmt --check";
-            packages = rustToolchain;
           }
           // cargoCheck {
             # Lint and test in the same check to reuse the compiler cache.
@@ -85,14 +85,10 @@
               cargo clippy -- -Dwarnings
               cargo insta test
             '';
-            packages = rustToolchain ++ [ pkgs.cargo-insta ];
           };
 
         devShells.default = pkgs.mkShell {
-          packages = rustToolchain ++ [
-            # Better DX to run and review the snapshot tests.
-            pkgs.cargo-insta
-          ];
+          packages = rustToolchain ++ [ pkgs.typos ];
         };
 
         packages = rec {

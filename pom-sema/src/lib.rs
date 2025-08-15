@@ -2,20 +2,20 @@ use pom_parser::ast::Ast;
 
 use crate::{
     ir::Ir,
-    lowering::{error::Errors, lower},
-    typecheck::typecheck,
+    lowering::{error::Errors as LoweringErrors, lower},
+    typecheck::{error::Errors as TypecheckErrors, typecheck},
 };
 
 pub mod ir;
 mod lowering;
 mod typecheck;
 
-pub fn analyse(src: &str, ast: Ast) -> (Ir, Errors) {
-    let (mut ir, errors) = lower(src, ast);
+pub fn analyse(src: &str, ast: Ast) -> (Ir, LoweringErrors, TypecheckErrors) {
+    let (mut ir, lowering_errors) = lower(src, ast);
 
-    typecheck(&mut ir);
+    let typecheck_errors = typecheck(&mut ir);
 
-    (ir, errors)
+    (ir, lowering_errors, typecheck_errors)
 }
 
 mod ast {

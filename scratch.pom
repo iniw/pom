@@ -1,3 +1,6 @@
-int: type = i32;
-succ: int = 100;
-fail: int = false;
+int := i32;
+
+number1 := 100;
+number: int = number1;
+
+fail: bool = number;

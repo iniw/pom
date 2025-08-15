@@ -28,18 +28,12 @@ pub struct Ir {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Sym {
-    pub kind: SymKind,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum SymKind {
+pub enum Sym {
     Expr(Id<Expr>),
-
     Fn { params: Vec<Bind> },
     Type(Option<Id<Type>>),
 
-    Infer,
+    Infer(Option<Id<Type>>),
 }
 
 #[derive(Debug, PartialEq, Eq)]

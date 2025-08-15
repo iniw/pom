@@ -4,7 +4,7 @@ use pom_utils::arena::{Arena, Id};
 use crate::{
     ast,
     ir::{
-        Builtins, Ir, Sym, SymKind, Type,
+        Builtins, Ir, Sym, Type,
         expr::{Expr, ExprKind},
         stmt::{Bind, Stmt, StmtKind},
     },
@@ -56,24 +56,7 @@ impl<'src> Lowerer<'src> {
             scope: Vec::new(),
         };
 
-        _ = lowerer.bind_name(
-            "bool",
-            Sym {
-                kind: SymKind::Type(Some(lowerer.ir.builtins.bool)),
-            },
-        );
-        _ = lowerer.bind_name(
-            "i32",
-            Sym {
-                kind: SymKind::Type(Some(lowerer.ir.builtins.i32)),
-            },
-        );
-        _ = lowerer.bind_name(
-            "f32",
-            Sym {
-                kind: SymKind::Type(Some(lowerer.ir.builtins.f32)),
-            },
-        );
+        lowerer.bind_builtins();
 
         lowerer
     }
@@ -125,17 +108,17 @@ impl<'src> Lowerer<'src> {
         let kind = match bind.kind {
             ast::BindKind::Expr(expr) => {
                 let expr = self.lower_expr(ast, expr);
-                SymKind::Expr(expr)
+                Sym::Expr(expr)
             }
             ast::BindKind::Fn { ref params } => {
                 let params = params
                     .iter()
                     .map(|param| self.lower_bind(ast, param))
                     .collect();
-                SymKind::Fn { params }
+                Sym::Fn { params }
             }
-            ast::BindKind::Type => SymKind::Type(None),
-            ast::BindKind::Infer => SymKind::Infer,
+            ast::BindKind::Type => Sym::Type(None),
+            ast::BindKind::Infer => Sym::Infer(None),
         };
 
         let rhs = bind.rhs.map(|rhs| self.lower_expr(ast, rhs));
@@ -145,7 +128,7 @@ impl<'src> Lowerer<'src> {
         match ast.exprs[bind.lhs].kind {
             ast::ExprKind::Ident => {
                 let name = ast.exprs[bind.lhs].span.text(self.src);
-                let sym = self.bind_name(name, Sym { kind });
+                let sym = self.bind_name(name, kind);
                 let lhs = self.lower_expr(ast, bind.lhs);
                 Bind { sym, lhs, rhs }
             }
@@ -224,6 +207,18 @@ impl<'src> Lowerer<'src> {
         let sym = self.ir.symbols.push(sym);
         self.scope.push((name, sym));
         sym
+    }
+
+    fn bind_builtins(&mut self) {
+        macro_rules! bind {
+            ($name:ident) => {
+                _ = self.bind_name(stringify!($name), Sym::Type(Some(self.ir.builtins.$name)));
+            };
+        }
+
+        bind!(bool);
+        bind!(i32);
+        bind!(f32);
     }
 
     fn invalid_expr(&mut self, err: Error) -> Id<Expr> {
