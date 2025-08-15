@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v5.0.0
 
       - name: Install Nix
         uses: DeterminateSystems/determinate-nix-action@v3.8.5
