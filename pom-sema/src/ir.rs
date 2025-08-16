@@ -8,13 +8,6 @@ use crate::ir::{
 pub mod expr;
 pub mod stmt;
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct Builtins {
-    pub bool: Id<Type>,
-    pub i32: Id<Type>,
-    pub f32: Id<Type>,
-}
-
 #[derive(Debug, PartialEq)]
 pub struct Ir {
     pub items: Vec<Id<Stmt>>,
@@ -22,19 +15,49 @@ pub struct Ir {
     pub exprs: Arena<Expr>,
 
     pub symbols: Arena<Sym>,
-
-    pub types: Arena<Type>,
-    pub builtins: Builtins,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Sym {
-    Expr(Id<Expr>),
-    Fn { params: Vec<Bind> },
-    Type(Option<Id<Type>>),
+    Resolved(Type),
 
-    Infer(Option<Id<Type>>),
+    Compute(Id<Expr>),
+
+    NewType,
+
+    Infer,
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct Type {}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Type {
+    Kind(Kind),
+    Data(Data),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Kind {
+    Fn(FnSignature),
+    Type(TypeCtor),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Data {
+    Fn(FnSignature),
+    Type(TypeCtor),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FnSignature {
+    pub params: Vec<Bind>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TypeCtor {
+    // Nullary
+    Bool,
+    I32,
+    F32,
+
+    // N-ary
+    Struct(Vec<TypeCtor>),
+}

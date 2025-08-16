@@ -151,44 +151,32 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := a;\n\"#)"
         ),
         symbols: Arena(
             [
-                Type(
-                    Some(
-                        Id<Type>(1),
+                Resolved(
+                    Kind(
+                        Type(
+                            I32,
+                        ),
                     ),
                 ),
-                Type(
-                    Some(
-                        Id<Type>(2),
+                Resolved(
+                    Kind(
+                        Type(
+                            F32,
+                        ),
                     ),
                 ),
-                Type(
-                    Some(
-                        Id<Type>(3),
+                Resolved(
+                    Kind(
+                        Type(
+                            Bool,
+                        ),
                     ),
                 ),
-                Infer(
-                    None,
-                ),
-                Infer(
-                    None,
-                ),
-                Infer(
-                    None,
-                ),
+                Infer,
+                Infer,
+                Infer,
             ],
         ),
-        types: Arena(
-            [
-                Type,
-                Type,
-                Type,
-            ],
-        ),
-        builtins: Builtins {
-            bool: Id<Type>(1),
-            i32: Id<Type>(2),
-            f32: Id<Type>(3),
-        },
     },
     Arena(
         [

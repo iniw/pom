@@ -17,13 +17,17 @@ expression: "test(\"f: fn (x) = x;\")"
                                 params: [
                                     Bind {
                                         lhs: Id<Expr>(2),
-                                        kind: Infer,
-                                        rhs: None,
+                                        kind: Expr(
+                                            Id<Expr>(3),
+                                        ),
+                                        rhs: Some(
+                                            Id<Expr>(4),
+                                        ),
                                     },
                                 ],
                             },
                             rhs: Some(
-                                Id<Expr>(3),
+                                Id<Expr>(5),
                             ),
                         },
                     ),
@@ -51,10 +55,28 @@ expression: "test(\"f: fn (x) = x;\")"
                     },
                 },
                 Expr {
+                    kind: Invalid(
+                        Id<Error>(2),
+                    ),
+                    span: Span {
+                        start: 8,
+                        end: 9,
+                    },
+                },
+                Expr {
                     kind: Ident,
                     span: Span {
                         start: 12,
                         end: 13,
+                    },
+                },
+                Expr {
+                    kind: Invalid(
+                        Id<Error>(4),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 14,
                     },
                 },
             ],
@@ -83,9 +105,12 @@ expression: "test(\"f: fn (x) = x;\")"
             Error {
                 kind: UnexpectedToken {
                     wanted: [
-                        Fn,
-                        Type,
+                        Bool,
+                        Float,
                         Ident,
+                        Int,
+                        LBrace,
+                        LParen,
                     ],
                     got: Token {
                         kind: RParen,
@@ -98,6 +123,62 @@ expression: "test(\"f: fn (x) = x;\")"
                 span: Span {
                     start: 7,
                     end: 8,
+                },
+            },
+            Error {
+                kind: UnexpectedToken {
+                    wanted: [
+                        Comma,
+                        RParen,
+                    ],
+                    got: Token {
+                        kind: Semicolon,
+                        span: Span {
+                            start: 13,
+                            end: 14,
+                        },
+                    },
+                },
+                span: Span {
+                    start: 6,
+                    end: 13,
+                },
+            },
+            Error {
+                kind: UnexpectedToken {
+                    wanted: [
+                        Equal,
+                        Semicolon,
+                    ],
+                    got: Token {
+                        kind: Eof,
+                        span: Span {
+                            start: 4294967295,
+                            end: 4294967295,
+                        },
+                    },
+                },
+                span: Span {
+                    start: 0,
+                    end: 14,
+                },
+            },
+            Error {
+                kind: UnexpectedToken {
+                    wanted: [
+                        Semicolon,
+                    ],
+                    got: Token {
+                        kind: Eof,
+                        span: Span {
+                            start: 4294967295,
+                            end: 4294967295,
+                        },
+                    },
+                },
+                span: Span {
+                    start: 0,
+                    end: 14,
                 },
             },
         ],

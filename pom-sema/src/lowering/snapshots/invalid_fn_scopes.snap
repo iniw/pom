@@ -209,50 +209,42 @@ expression: "test(r#\"\na: fn = {\n    b := 55;\n    c := b + b;\n};\n\nd := b;\
         ),
         symbols: Arena(
             [
-                Type(
-                    Some(
-                        Id<Type>(1),
+                Resolved(
+                    Kind(
+                        Type(
+                            I32,
+                        ),
                     ),
                 ),
-                Type(
-                    Some(
-                        Id<Type>(2),
+                Resolved(
+                    Kind(
+                        Type(
+                            F32,
+                        ),
                     ),
                 ),
-                Type(
-                    Some(
-                        Id<Type>(3),
+                Resolved(
+                    Kind(
+                        Type(
+                            Bool,
+                        ),
                     ),
                 ),
-                Infer(
-                    None,
+                Infer,
+                Infer,
+                Resolved(
+                    Kind(
+                        Fn(
+                            FnSignature {
+                                params: [],
+                            },
+                        ),
+                    ),
                 ),
-                Infer(
-                    None,
-                ),
-                Fn {
-                    params: [],
-                },
-                Infer(
-                    None,
-                ),
-                Infer(
-                    None,
-                ),
+                Infer,
+                Infer,
             ],
         ),
-        types: Arena(
-            [
-                Type,
-                Type,
-                Type,
-            ],
-        ),
-        builtins: Builtins {
-            bool: Id<Type>(1),
-            i32: Id<Type>(2),
-            f32: Id<Type>(3),
-        },
     },
     Arena(
         [
