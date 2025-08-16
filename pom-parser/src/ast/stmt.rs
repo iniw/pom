@@ -20,12 +20,12 @@ pub enum StmtKind {
 #[derive(Debug, PartialEq, Eq)]
 pub struct Bind {
     pub lhs: Id<Expr>,
-    pub kind: BindKind,
+    pub ty: TypeAnnotation,
     pub rhs: Option<Id<Expr>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum BindKind {
+pub enum TypeAnnotation {
     Fn { params: Vec<Bind> },
     Type,
 

@@ -13,7 +13,7 @@ expression: "test(\"var := 55;\")"
                     kind: Bind(
                         Bind {
                             lhs: Id<Expr>(1),
-                            kind: Infer,
+                            ty: Infer,
                             rhs: Some(
                                 Id<Expr>(2),
                             ),

@@ -1,6 +1,4 @@
-use pom_utils::arena::Id;
-
-use crate::ir::{Type, TypeCtor, expr::Expr};
+use crate::ir::{Data, Kind, Type, TypeCtor};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Error {
@@ -9,9 +7,12 @@ pub struct Error {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ErrorKind {
-    InvalidSymbolKind { expr: Id<Expr> },
+    InvalidSymbolType { ty: Type },
 
     InvalidNewTypeRhs { rhs: Type },
+
+    MismatchedBind { wanted: Kind, got: Type },
+    MismatchedDataBind { wanted: Kind, got: Data },
 
     MismatchedTypes { wanted: Type, got: Type },
     MismatchedTypeCtors { wanted: TypeCtor, got: TypeCtor },
