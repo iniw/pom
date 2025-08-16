@@ -13,7 +13,7 @@ expression: "test(\"f: fn () = {};\")"
                     kind: Bind(
                         Bind {
                             lhs: Id<Expr>(1),
-                            kind: Fn {
+                            ty: Fn {
                                 params: [],
                             },
                             rhs: Some(

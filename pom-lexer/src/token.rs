@@ -57,6 +57,9 @@ pub enum TokenKind {
     #[token(r"-")]
     Minus,
 
+    #[token(r"|")]
+    Pipe,
+
     #[token(r"+")]
     Plus,
 
