@@ -26,4 +26,4 @@ jobs:
         uses: DeterminateSystems/determinate-nix-action@v3.8.5
 
       - name: Check
-        run: nix flake check -L --keep-going
+        run: nix flake check --debug -L --keep-going

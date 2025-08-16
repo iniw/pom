@@ -10,7 +10,7 @@ use crate::{
     ast::{
         Ast,
         expr::{BinaryOp, Expr, ExprKind, Literal},
-        stmt::{Bind, BindKind, Stmt, StmtKind},
+        stmt::{Bind, Stmt, StmtKind, TypeAnnotation},
     },
     error::{Error, ErrorKind},
 };
@@ -107,7 +107,7 @@ impl<'src> Parser<'src> {
             let rhs = self.parse_expr();
             return Bind {
                 lhs,
-                kind: BindKind::Infer,
+                ty: TypeAnnotation::Infer,
                 rhs: Some(rhs),
             };
         }
@@ -140,14 +140,14 @@ impl<'src> Parser<'src> {
                     }
                 }
 
-                BindKind::Fn { params }
+                TypeAnnotation::Fn { params }
             }
 
-            Ok(Type) => BindKind::Type,
+            Ok(Type) => TypeAnnotation::Type,
 
             Err(_) => {
                 let expr = self.parse_expr();
-                BindKind::Expr(expr)
+                TypeAnnotation::Expr(expr)
             }
 
             _ => {
@@ -162,7 +162,7 @@ impl<'src> Parser<'src> {
                 let rhs = self.parse_expr();
                 Bind {
                     lhs,
-                    kind,
+                    ty: kind,
                     rhs: Some(rhs),
                 }
             }
@@ -172,7 +172,7 @@ impl<'src> Parser<'src> {
                 self.cursor -= 1;
                 Bind {
                     lhs,
-                    kind,
+                    ty: kind,
                     rhs: None,
                 }
             }
@@ -184,7 +184,7 @@ impl<'src> Parser<'src> {
                 });
                 Bind {
                     lhs,
-                    kind,
+                    ty: kind,
                     rhs: Some(rhs),
                 }
             }
