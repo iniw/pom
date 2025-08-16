@@ -77,7 +77,7 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
             [
                 Expr {
                     kind: Ident(
-                        Id<Sym>(2),
+                        Id<Sym>(1),
                     ),
                     span: Span {
                         start: 11,
@@ -191,56 +191,50 @@ expression: "test(r#\"\na: fn (b: i32) = {\n    c := b + b;\n};\n\nd := b;\ne :=
         ),
         symbols: Arena(
             [
-                Type(
-                    Some(
-                        Id<Type>(1),
+                Resolved(
+                    Kind(
+                        Type(
+                            I32,
+                        ),
                     ),
                 ),
-                Type(
-                    Some(
-                        Id<Type>(2),
+                Resolved(
+                    Kind(
+                        Type(
+                            F32,
+                        ),
                     ),
                 ),
-                Type(
-                    Some(
-                        Id<Type>(3),
+                Resolved(
+                    Kind(
+                        Type(
+                            Bool,
+                        ),
                     ),
                 ),
-                Expr(
+                Compute(
                     Id<Expr>(1),
                 ),
-                Infer(
-                    None,
+                Infer,
+                Resolved(
+                    Kind(
+                        Fn(
+                            FnSignature {
+                                params: [
+                                    Bind {
+                                        sym: Id<Sym>(4),
+                                        lhs: Id<Expr>(2),
+                                        rhs: None,
+                                    },
+                                ],
+                            },
+                        ),
+                    ),
                 ),
-                Fn {
-                    params: [
-                        Bind {
-                            sym: Id<Sym>(4),
-                            lhs: Id<Expr>(2),
-                            rhs: None,
-                        },
-                    ],
-                },
-                Infer(
-                    None,
-                ),
-                Infer(
-                    None,
-                ),
+                Infer,
+                Infer,
             ],
         ),
-        types: Arena(
-            [
-                Type,
-                Type,
-                Type,
-            ],
-        ),
-        builtins: Builtins {
-            bool: Id<Type>(1),
-            i32: Id<Type>(2),
-            f32: Id<Type>(3),
-        },
     },
     Arena(
         [

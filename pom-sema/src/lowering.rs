@@ -1,10 +1,11 @@
 use pom_parser::ast::Ast;
 use pom_utils::arena::{Arena, Id};
 
+use crate::ir::{FnSignature, TypeCtor};
 use crate::{
     ast,
     ir::{
-        Builtins, Ir, Sym, Type,
+        Ir, Kind, Sym, Type,
         expr::{Expr, ExprKind},
         stmt::{Bind, Stmt, StmtKind},
     },
@@ -30,15 +31,18 @@ struct Lowerer<'src> {
 
 impl<'src> Lowerer<'src> {
     fn new(src: &'src str, ast: &Ast) -> Self {
-        let mut types = Arena::new();
+        let mut builtins = Arena::new();
+        let mut globals = Vec::new();
 
-        let builtins = Builtins {
-            bool: types.push(Type {}),
-            i32: types.push(Type {}),
-            f32: types.push(Type {}),
-        };
+        let mut builtin = |ctor| builtins.push(Sym::Resolved(Type::Kind(Kind::Type(ctor))));
 
-        let mut lowerer = Self {
+        globals.extend_from_slice(&[
+            ("i32", builtin(TypeCtor::I32)),
+            ("f32", builtin(TypeCtor::F32)),
+            ("bool", builtin(TypeCtor::Bool)),
+        ]);
+
+        Self {
             src,
 
             ir: Ir {
@@ -46,19 +50,12 @@ impl<'src> Lowerer<'src> {
                 stmts: Arena::with_capacity(ast.stmts.len()),
                 exprs: Arena::with_capacity(ast.exprs.len()),
 
-                symbols: Arena::new(),
-
-                types,
-                builtins,
+                symbols: builtins,
             },
             errors: Errors::new(),
 
-            scope: Vec::new(),
-        };
-
-        lowerer.bind_builtins();
-
-        lowerer
+            scope: globals,
+        }
     }
 
     fn lower(mut self, ast: Ast) -> (Ir, Errors) {
@@ -108,17 +105,17 @@ impl<'src> Lowerer<'src> {
         let kind = match bind.kind {
             ast::BindKind::Expr(expr) => {
                 let expr = self.lower_expr(ast, expr);
-                Sym::Expr(expr)
+                Sym::Compute(expr)
             }
             ast::BindKind::Fn { ref params } => {
                 let params = params
                     .iter()
                     .map(|param| self.lower_bind(ast, param))
                     .collect();
-                Sym::Fn { params }
+                Sym::Resolved(Type::Kind(Kind::Fn(FnSignature { params })))
             }
-            ast::BindKind::Type => Sym::Type(None),
-            ast::BindKind::Infer => Sym::Infer(None),
+            ast::BindKind::Type => Sym::NewType,
+            ast::BindKind::Infer => Sym::Infer,
         };
 
         let rhs = bind.rhs.map(|rhs| self.lower_expr(ast, rhs));
@@ -207,18 +204,6 @@ impl<'src> Lowerer<'src> {
         let sym = self.ir.symbols.push(sym);
         self.scope.push((name, sym));
         sym
-    }
-
-    fn bind_builtins(&mut self) {
-        macro_rules! bind {
-            ($name:ident) => {
-                _ = self.bind_name(stringify!($name), Sym::Type(Some(self.ir.builtins.$name)));
-            };
-        }
-
-        bind!(bool);
-        bind!(i32);
-        bind!(f32);
     }
 
     fn invalid_expr(&mut self, err: Error) -> Id<Expr> {

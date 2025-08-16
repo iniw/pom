@@ -145,23 +145,6 @@ impl<'src> Parser<'src> {
 
             Ok(Type) => BindKind::Type,
 
-            // Infer the kind of bindings when prematurely reaching a sentinel.
-            // This helps reconstruct a valid AST in weird cases such as:
-            // `f: fn (a:) = a;`
-            // `f: fn (a) = a;`
-            Err(token) if sentinels.contains(&token.kind) => {
-                _ = self.errors.push(Error {
-                    kind: ErrorKind::UnexpectedToken {
-                        // NOTE: This is a best effort list. The actual valid tokens here are [Fn, Type, {arbitrary expression}],
-                        //       but it doesn't seem very useful to dump out all of the expression tokens.
-                        wanted: vec![Fn, Type, Ident],
-                        got: token,
-                    },
-                    span: self.spanned_since(checkpoint),
-                });
-                BindKind::Infer
-            }
-
             Err(_) => {
                 let expr = self.parse_expr();
                 BindKind::Expr(expr)

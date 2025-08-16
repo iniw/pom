@@ -26,9 +26,10 @@ pub struct Bind {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum BindKind {
-    Expr(Id<Expr>),
     Fn { params: Vec<Bind> },
     Type,
+
+    Expr(Id<Expr>),
 
     Infer,
 }
