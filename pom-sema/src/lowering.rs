@@ -32,15 +32,13 @@ struct Lowerer<'src> {
 impl<'src> Lowerer<'src> {
     fn new(src: &'src str, ast: &Ast) -> Self {
         let mut builtins = Arena::new();
-        let mut globals = Vec::new();
-
         let mut builtin = |ctor| builtins.push(Sym::Resolved(Type::Kind(Kind::Type(ctor))));
 
-        globals.extend_from_slice(&[
+        let globals = vec![
             ("i32", builtin(TypeCtor::I32)),
             ("f32", builtin(TypeCtor::F32)),
             ("bool", builtin(TypeCtor::Bool)),
-        ]);
+        ];
 
         Self {
             src,
@@ -102,7 +100,7 @@ impl<'src> Lowerer<'src> {
         // After the rhs is lowered, the scope is restored to where it was before, so `b` is no longer available.
         let scope_checkpoint = self.scope.len();
 
-        let kind = match bind.kind {
+        let kind = match bind.ty {
             ast::BindKind::Expr(expr) => {
                 let expr = self.lower_expr(ast, expr);
                 Sym::Compute(expr)

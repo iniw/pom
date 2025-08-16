@@ -20,8 +20,7 @@ impl Token {
 }
 
 #[derive(Logos, Debug, Clone, Copy, PartialEq, Eq)]
-#[logos(error = ErrorKind)]
-#[logos(skip r"[ \t\r\n\f]+")]
+#[logos(skip r"[ \t\r\n\f]+", error = ErrorKind)]
 pub enum TokenKind {
     #[token(r"true")]
     #[token(r"false")]
