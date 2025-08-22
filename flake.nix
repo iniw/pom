@@ -85,9 +85,7 @@
           // cargoCheck {
             name = "test";
             command = "cargo insta test";
-          }
-          # Ensure that the default package builds and passes tests.
-          // inputs.self.packages.${system};
+          };
 
         devShells.default = pkgs.mkShell {
           packages = rustToolchain;
