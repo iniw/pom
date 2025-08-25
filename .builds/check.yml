@@ -1,0 +1,8 @@
+image: nixos
+environment:
+  NIX_CONFIG: "experimental-features = nix-command flakes"
+sources:
+  - https://git.sr.ht/~wini/pom
+tasks:
+  - check:
+      nix flake check -L --keep-going
