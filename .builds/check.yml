@@ -4,6 +4,6 @@ environment:
 sources:
   - https://git.sr.ht/~wini/pom
 tasks:
-  - check:
+  - check: |
       cd pom/
       nix flake check -L --keep-going
