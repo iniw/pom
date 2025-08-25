@@ -5,4 +5,5 @@ sources:
   - https://git.sr.ht/~wini/pom
 tasks:
   - check:
+      cd pom/
       nix flake check -L --keep-going
