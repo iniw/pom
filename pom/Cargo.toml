@@ -8,4 +8,4 @@ clap = { version = "4.5.48", features = ["derive"] }
 pom-lexer = { path = "../pom-lexer" }
 pom-parser = { path = "../pom-parser" }
 pom-sema = { path = "../pom-sema" }
-serde = { version = "1.0.219", features = ["derive"] }
+serde = { version = "1.0.226", features = ["derive"] }
