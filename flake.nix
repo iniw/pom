@@ -22,6 +22,10 @@
         ];
       in
       {
+        devShells.default = pkgs.mkShell {
+          packages = rustToolchain;
+        };
+
         checks =
           let
             simpleCheck =
@@ -86,25 +90,6 @@
             name = "test";
             command = "cargo insta test";
           };
-
-        devShells.default = pkgs.mkShell {
-          packages = rustToolchain;
-        };
-
-        packages = rec {
-          default = pom;
-
-          pom = pkgs.rustPlatform.buildRustPackage {
-            name = "pom";
-            src = inputs.self;
-
-            cargoLock.lockFile = ./Cargo.lock;
-
-            # Only build and run tests for the specified package.
-            cargoBuildFlags = "--package pom";
-            cargoTestFlags = "--package pom";
-          };
-        };
       }
     );
 }
