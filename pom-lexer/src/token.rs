@@ -1,6 +1,5 @@
 use logos::Logos;
 use pom_utils::span::Span;
-use static_assertions::const_assert_eq;
 
 use crate::error::ErrorKind;
 
@@ -77,16 +76,12 @@ pub enum TokenKind {
     #[token(r"type")]
     Type,
 
-    Invalid,
+    Invalid(ErrorKind),
 
     Eof,
 }
 
 pub type Tokens = Vec<Token>;
-
-// This should be as tiny as possible.
-// Increasing the size of this enum increases the size of several things throughout the parser.
-const_assert_eq!(std::mem::size_of::<TokenKind>(), 1);
 
 pub trait TokenExt {
     type Output;

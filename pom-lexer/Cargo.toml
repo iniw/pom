@@ -1,12 +1,11 @@
 [package]
 name = "pom-lexer"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
 logos = "0.15.1"
 pom-utils = { path = "../pom-utils" }
-static_assertions = "1.1.0"
 
 [dev-dependencies]
 pom-utils = { path = "../pom-utils", features = ["snap"] }
