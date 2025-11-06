@@ -103,7 +103,9 @@ expression: "test(\"55 ^ $ 47\")"
                         Semicolon,
                     ],
                     got: Token {
-                        kind: Invalid,
+                        kind: Invalid(
+                            UnknownToken,
+                        ),
                         span: Span {
                             start: 3,
                             end: 4,
@@ -126,7 +128,9 @@ expression: "test(\"55 ^ $ 47\")"
                         LParen,
                     ],
                     got: Token {
-                        kind: Invalid,
+                        kind: Invalid(
+                            UnknownToken,
+                        ),
                         span: Span {
                             start: 3,
                             end: 4,
@@ -149,7 +153,9 @@ expression: "test(\"55 ^ $ 47\")"
                         LParen,
                     ],
                     got: Token {
-                        kind: Invalid,
+                        kind: Invalid(
+                            UnknownToken,
+                        ),
                         span: Span {
                             start: 5,
                             end: 6,

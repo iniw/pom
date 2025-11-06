@@ -35,7 +35,7 @@ impl<'src> Lexer<'src> {
                 Err(err) => {
                     self.errors.push(Error { kind: err, span });
                     self.tokens.push(Token {
-                        kind: TokenKind::Invalid,
+                        kind: TokenKind::Invalid(err),
                         span,
                     })
                 }

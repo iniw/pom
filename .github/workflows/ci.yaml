@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  check:
+    name: CI @ ${{ matrix.system }}
+    runs-on: ${{ matrix.runner_label }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - system: x86_64-linux
+            runner_label: ubuntu-latest
+          - system: aarch64-darwin
+            runner_label: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install nix
+        uses: DeterminateSystems/determinate-nix-action@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install cachix
+        uses: cachix/cachix-action@v16
+        with:
+          name: pom
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Check
+        run: nix flake check --keep-going --print-build-logs
