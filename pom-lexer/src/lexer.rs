@@ -16,6 +16,11 @@ pub struct Lexer<'src> {
 
 impl<'src> Lexer<'src> {
     pub fn new(src: &'src str) -> Self {
+        println!("Test");
+
+
+
+
         Self {
             tokens: Tokens::new(),
             errors: Errors::new(),
