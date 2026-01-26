@@ -13,7 +13,7 @@ expression: "test(\"var := 55;\")"
                     kind: Bind(
                         Bind {
                             lhs: Id<Expr>(1),
-                            ty: Infer,
+                            ty: None,
                             rhs: Some(
                                 Id<Expr>(2),
                             ),
@@ -36,10 +36,8 @@ expression: "test(\"var := 55;\")"
                     },
                 },
                 Expr {
-                    kind: Literal(
-                        Int(
-                            55,
-                        ),
+                    kind: Int(
+                        55,
                     ),
                     span: Span {
                         start: 7,

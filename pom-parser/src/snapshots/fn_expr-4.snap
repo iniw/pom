@@ -1,0 +1,63 @@
+---
+source: pom-parser/src/tests.rs
+expression: "test(\"$(x) x;\")"
+---
+(
+    Ast {
+        items: [
+            Id<Stmt>(1),
+        ],
+        stmts: Arena(
+            [
+                Stmt {
+                    kind: Expr(
+                        Id<Expr>(3),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 7,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 2,
+                        end: 3,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 5,
+                        end: 6,
+                    },
+                },
+                Expr {
+                    kind: Fn {
+                        kind: Closure,
+                        params: [
+                            Bind {
+                                lhs: Id<Expr>(1),
+                                ty: None,
+                                rhs: None,
+                            },
+                        ],
+                        ret: None,
+                        body: Id<Expr>(2),
+                    },
+                    span: Span {
+                        start: 0,
+                        end: 6,
+                    },
+                },
+            ],
+        ),
+    },
+    Arena(
+        [],
+    ),
+)

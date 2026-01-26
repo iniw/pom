@@ -21,9 +21,15 @@ impl Token {
 #[derive(Logos, Debug, Clone, Copy, PartialEq, Eq)]
 #[logos(skip r"[ \t\r\n\f]+", error = ErrorKind)]
 pub enum TokenKind {
+    #[token(r"->")]
+    Arrow,
+
     #[token(r"true")]
     #[token(r"false")]
     Bool,
+
+    #[token(r"@")]
+    At,
 
     #[token(r":")]
     Colon,
@@ -31,14 +37,14 @@ pub enum TokenKind {
     #[token(r",")]
     Comma,
 
+    #[token(r"$")]
+    Dollar,
+
     #[token(r"=")]
     Equal,
 
     #[regex(r"[-+]?[0-9]+\.[0-9]+")]
     Float,
-
-    #[token(r"fn")]
-    Fn,
 
     #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*")]
     Ident,
@@ -78,11 +84,14 @@ pub enum TokenKind {
 
     Invalid(ErrorKind),
 
+    /// Synthetic end-of-input marker (not produced by logos).
     Eof,
 }
 
+/// Alias for a sequence of tokens produced by the lexer.
 pub type Tokens = Vec<Token>;
 
+/// Maps a `Result<Token, E>` or `Option<Token>` to its `.kind`.
 pub trait TokenExt {
     type Output;
 
@@ -92,6 +101,7 @@ pub trait TokenExt {
 impl<E> TokenExt for Result<Token, E> {
     type Output = Result<TokenKind, E>;
 
+    #[inline]
     fn kind(self) -> Self::Output {
         self.map(|token| token.kind)
     }
@@ -100,6 +110,7 @@ impl<E> TokenExt for Result<Token, E> {
 impl TokenExt for Option<Token> {
     type Output = Option<TokenKind>;
 
+    #[inline]
     fn kind(self) -> Self::Output {
         self.map(|token| token.kind)
     }

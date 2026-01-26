@@ -45,10 +45,8 @@ expression: "test(r#\"\na := 55;\nb := a + a;\n\"#)"
         exprs: Arena(
             [
                 Expr {
-                    kind: Literal(
-                        Int(
-                            55,
-                        ),
+                    kind: Int(
+                        55,
                     ),
                     span: Span {
                         start: 6,

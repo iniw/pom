@@ -30,10 +30,8 @@ expression: "test(\"f(55);\")"
                     },
                 },
                 Expr {
-                    kind: Literal(
-                        Int(
-                            55,
-                        ),
+                    kind: Int(
+                        55,
                     ),
                     span: Span {
                         start: 2,

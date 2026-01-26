@@ -4,6 +4,10 @@ use std::{
     slice::Iter,
 };
 
+/// Typed arena backed by a `Vec<T>`, using 1-indexed [`Id<T>`] handles.
+///
+/// Nodes are allocated contiguously and referenced by opaque `Id<T>` values
+/// rather than pointers. Indexing by `Id<T>` is unchecked for performance.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Arena<T>(Vec<T>);
 
@@ -18,6 +22,7 @@ impl<T> Arena<T> {
         Self(Vec::with_capacity(cap))
     }
 
+    /// Inserts an element and returns its [`Id`].
     #[inline]
     pub fn push(&mut self, entry: T) -> Id<T> {
         self.0.push(entry);
@@ -92,6 +97,7 @@ impl<T> From<Vec<T>> for Arena<T> {
     }
 }
 
+/// Convenience constructor for [`Arena`], mirroring `vec![]` syntax.
 #[macro_export]
 macro_rules! arena {
     [] => (
@@ -105,6 +111,10 @@ macro_rules! arena {
     );
 }
 
+/// Typed, opaque non-zero `u32` handle into an [`Arena<T>`].
+///
+/// `Copy` and cheap to pass around. Cannot be constructed outside this module;
+/// only [`Arena::push`] creates new ids.
 #[must_use = "Ids cannot be created manually and so should not be ignored when given to you."]
 #[repr(transparent)]
 pub struct Id<T>(NonZeroU32, std::marker::PhantomData<T>);

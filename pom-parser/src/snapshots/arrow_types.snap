@@ -1,0 +1,119 @@
+---
+source: pom-parser/src/tests.rs
+expression: "test(\"foo: (i32) -> i32 = @(x) x;\")"
+---
+(
+    Ast {
+        items: [
+            Id<Stmt>(1),
+        ],
+        stmts: Arena(
+            [
+                Stmt {
+                    kind: Bind(
+                        Bind {
+                            lhs: Id<Expr>(1),
+                            ty: Some(
+                                Expr(
+                                    Id<Expr>(5),
+                                ),
+                            ),
+                            rhs: Some(
+                                Id<Expr>(8),
+                            ),
+                        },
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 27,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 0,
+                        end: 3,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 6,
+                        end: 9,
+                    },
+                },
+                Expr {
+                    kind: Tuple(
+                        [
+                            Bind {
+                                lhs: Id<Expr>(2),
+                                ty: None,
+                                rhs: None,
+                            },
+                        ],
+                    ),
+                    span: Span {
+                        start: 5,
+                        end: 10,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 14,
+                        end: 17,
+                    },
+                },
+                Expr {
+                    kind: FnType {
+                        lhs: Id<Expr>(3),
+                        rhs: Id<Expr>(4),
+                    },
+                    span: Span {
+                        start: 5,
+                        end: 17,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 22,
+                        end: 23,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 25,
+                        end: 26,
+                    },
+                },
+                Expr {
+                    kind: Fn {
+                        kind: Static,
+                        params: [
+                            Bind {
+                                lhs: Id<Expr>(6),
+                                ty: None,
+                                rhs: None,
+                            },
+                        ],
+                        ret: None,
+                        body: Id<Expr>(7),
+                    },
+                    span: Span {
+                        start: 20,
+                        end: 26,
+                    },
+                },
+            ],
+        ),
+    },
+    Arena(
+        [],
+    ),
+)

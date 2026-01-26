@@ -1,6 +1,6 @@
 ---
 source: pom-parser/src/tests.rs
-expression: "test(\"{55 + 47; 1 * 1;}\")"
+expression: "test(\"{55 + 47; 1 * 1;};\")"
 ---
 (
     Ast {
@@ -28,15 +28,12 @@ expression: "test(\"{55 + 47; 1 * 1;}\")"
                     },
                 },
                 Stmt {
-                    kind: Block(
-                        [
-                            Id<Stmt>(1),
-                            Id<Stmt>(2),
-                        ],
+                    kind: Expr(
+                        Id<Expr>(7),
                     ),
                     span: Span {
                         start: 0,
-                        end: 17,
+                        end: 18,
                     },
                 },
             ],
@@ -44,10 +41,8 @@ expression: "test(\"{55 + 47; 1 * 1;}\")"
         exprs: Arena(
             [
                 Expr {
-                    kind: Literal(
-                        Int(
-                            55,
-                        ),
+                    kind: Int(
+                        55,
                     ),
                     span: Span {
                         start: 1,
@@ -55,10 +50,8 @@ expression: "test(\"{55 + 47; 1 * 1;}\")"
                     },
                 },
                 Expr {
-                    kind: Literal(
-                        Int(
-                            47,
-                        ),
+                    kind: Int(
+                        47,
                     ),
                     span: Span {
                         start: 6,
@@ -77,10 +70,8 @@ expression: "test(\"{55 + 47; 1 * 1;}\")"
                     },
                 },
                 Expr {
-                    kind: Literal(
-                        Int(
-                            1,
-                        ),
+                    kind: Int(
+                        1,
                     ),
                     span: Span {
                         start: 10,
@@ -88,10 +79,8 @@ expression: "test(\"{55 + 47; 1 * 1;}\")"
                     },
                 },
                 Expr {
-                    kind: Literal(
-                        Int(
-                            1,
-                        ),
+                    kind: Int(
+                        1,
                     ),
                     span: Span {
                         start: 14,
@@ -107,6 +96,18 @@ expression: "test(\"{55 + 47; 1 * 1;}\")"
                     span: Span {
                         start: 10,
                         end: 15,
+                    },
+                },
+                Expr {
+                    kind: Block(
+                        [
+                            Id<Stmt>(1),
+                            Id<Stmt>(2),
+                        ],
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 17,
                     },
                 },
             ],
