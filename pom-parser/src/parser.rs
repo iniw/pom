@@ -47,7 +47,7 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_stmt(&mut self) -> Id<Stmt> {
-        let checkpoint = self.checkpoint();
+        let checkpoint = self.checkpoint() + 1;
 
         match self.grab(LBrace) {
             Ok(_) => {
