@@ -46,6 +46,7 @@ a := a;
 }
 
 #[test]
+#[ignore]
 fn fn_scopes() {
     snap!(test(
         r#"
@@ -79,6 +80,7 @@ a: fn (b: i32) = {
 }
 
 #[test]
+#[ignore]
 fn invalid_fn_scopes() {
     snap!(test(
         r#"

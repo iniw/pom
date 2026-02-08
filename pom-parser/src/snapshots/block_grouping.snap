@@ -1,0 +1,140 @@
+---
+source: pom-parser/src/tests.rs
+expression: "test(\"{1 + 1} / 2 * 3 + 1;\")"
+---
+(
+    Ast {
+        items: [
+            Id<Stmt>(2),
+        ],
+        stmts: Arena(
+            [
+                Stmt {
+                    kind: Expr(
+                        Id<Expr>(3),
+                    ),
+                    span: Span {
+                        start: 1,
+                        end: 6,
+                    },
+                },
+                Stmt {
+                    kind: Expr(
+                        Id<Expr>(10),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 20,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [
+                Expr {
+                    kind: Int(
+                        1,
+                    ),
+                    span: Span {
+                        start: 1,
+                        end: 2,
+                    },
+                },
+                Expr {
+                    kind: Int(
+                        1,
+                    ),
+                    span: Span {
+                        start: 5,
+                        end: 6,
+                    },
+                },
+                Expr {
+                    kind: Binary {
+                        lhs: Id<Expr>(1),
+                        op: Add,
+                        rhs: Id<Expr>(2),
+                    },
+                    span: Span {
+                        start: 1,
+                        end: 6,
+                    },
+                },
+                Expr {
+                    kind: Block(
+                        [
+                            Id<Stmt>(1),
+                        ],
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 7,
+                    },
+                },
+                Expr {
+                    kind: Int(
+                        2,
+                    ),
+                    span: Span {
+                        start: 10,
+                        end: 11,
+                    },
+                },
+                Expr {
+                    kind: Binary {
+                        lhs: Id<Expr>(4),
+                        op: Div,
+                        rhs: Id<Expr>(5),
+                    },
+                    span: Span {
+                        start: 0,
+                        end: 11,
+                    },
+                },
+                Expr {
+                    kind: Int(
+                        3,
+                    ),
+                    span: Span {
+                        start: 14,
+                        end: 15,
+                    },
+                },
+                Expr {
+                    kind: Binary {
+                        lhs: Id<Expr>(6),
+                        op: Mul,
+                        rhs: Id<Expr>(7),
+                    },
+                    span: Span {
+                        start: 0,
+                        end: 15,
+                    },
+                },
+                Expr {
+                    kind: Int(
+                        1,
+                    ),
+                    span: Span {
+                        start: 18,
+                        end: 19,
+                    },
+                },
+                Expr {
+                    kind: Binary {
+                        lhs: Id<Expr>(8),
+                        op: Add,
+                        rhs: Id<Expr>(9),
+                    },
+                    span: Span {
+                        start: 0,
+                        end: 19,
+                    },
+                },
+            ],
+        ),
+    },
+    Arena(
+        [],
+    ),
+)

@@ -1,37 +1,30 @@
 ---
 source: pom-parser/src/tests.rs
-expression: "test(\"f: fn (a: i32) = ;\")"
+expression: "test(\"{;}\")"
 ---
 (
     Ast {
         items: [
-            Id<Stmt>(1),
+            Id<Stmt>(2),
         ],
         stmts: Arena(
             [
                 Stmt {
-                    kind: Bind(
-                        Bind {
-                            lhs: Id<Expr>(1),
-                            ty: Fn {
-                                params: [
-                                    Bind {
-                                        lhs: Id<Expr>(2),
-                                        ty: Expr(
-                                            Id<Expr>(3),
-                                        ),
-                                        rhs: None,
-                                    },
-                                ],
-                            },
-                            rhs: Some(
-                                Id<Expr>(4),
-                            ),
-                        },
+                    kind: Expr(
+                        Id<Expr>(1),
+                    ),
+                    span: Span {
+                        start: 1,
+                        end: 2,
+                    },
+                },
+                Stmt {
+                    kind: Expr(
+                        Id<Expr>(2),
                     ),
                     span: Span {
                         start: 0,
-                        end: 18,
+                        end: 3,
                     },
                 },
             ],
@@ -39,33 +32,23 @@ expression: "test(\"f: fn (a: i32) = ;\")"
         exprs: Arena(
             [
                 Expr {
-                    kind: Ident,
-                    span: Span {
-                        start: 0,
-                        end: 1,
-                    },
-                },
-                Expr {
-                    kind: Ident,
-                    span: Span {
-                        start: 7,
-                        end: 8,
-                    },
-                },
-                Expr {
-                    kind: Ident,
-                    span: Span {
-                        start: 10,
-                        end: 13,
-                    },
-                },
-                Expr {
                     kind: Invalid(
                         Id<Error>(1),
                     ),
                     span: Span {
-                        start: 17,
-                        end: 18,
+                        start: 1,
+                        end: 2,
+                    },
+                },
+                Expr {
+                    kind: Block(
+                        [
+                            Id<Stmt>(1),
+                        ],
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 3,
                     },
                 },
             ],
@@ -76,7 +59,9 @@ expression: "test(\"f: fn (a: i32) = ;\")"
             Error {
                 kind: UnexpectedToken {
                     wanted: [
+                        At,
                         Bool,
+                        Dollar,
                         Float,
                         Ident,
                         Int,
@@ -86,14 +71,14 @@ expression: "test(\"f: fn (a: i32) = ;\")"
                     got: Token {
                         kind: Semicolon,
                         span: Span {
-                            start: 17,
-                            end: 18,
+                            start: 1,
+                            end: 2,
                         },
                     },
                 },
                 span: Span {
-                    start: 15,
-                    end: 16,
+                    start: 0,
+                    end: 1,
                 },
             },
             Error {
@@ -111,7 +96,7 @@ expression: "test(\"f: fn (a: i32) = ;\")"
                 },
                 span: Span {
                     start: 0,
-                    end: 18,
+                    end: 3,
                 },
             },
         ],

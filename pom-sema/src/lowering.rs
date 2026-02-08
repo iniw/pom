@@ -1,7 +1,7 @@
 use pom_parser::ast::Ast;
 use pom_utils::arena::{Arena, Id};
 
-use crate::ir::{FnSignature, TypeCtor};
+use crate::ir::TypeCtor;
 use crate::{
     ast,
     ir::{
@@ -74,13 +74,6 @@ impl<'src> Lowerer<'src> {
                     span,
                 })
             }
-            ast::StmtKind::Block(ref stmts) => {
-                let stmts = self.lower_block(ast, stmts);
-                self.ir.stmts.push(Stmt {
-                    kind: StmtKind::Block(stmts),
-                    span,
-                })
-            }
             ast::StmtKind::Expr(expr) => {
                 let expr = self.lower_expr(ast, expr);
                 self.ir.stmts.push(Stmt {
@@ -101,19 +94,12 @@ impl<'src> Lowerer<'src> {
         let scope_checkpoint = self.scope.len();
 
         let kind = match bind.ty {
-            ast::BindKind::Expr(expr) => {
+            Some(ast::TypeAnnotation::Expr(expr)) => {
                 let expr = self.lower_expr(ast, expr);
                 Sym::Compute(expr)
             }
-            ast::BindKind::Fn { ref params } => {
-                let params = params
-                    .iter()
-                    .map(|param| self.lower_bind(ast, param))
-                    .collect();
-                Sym::Resolved(Type::Kind(Kind::Fn(FnSignature { params })))
-            }
-            ast::BindKind::Type => Sym::NewType,
-            ast::BindKind::Infer => Sym::Infer,
+            Some(ast::TypeAnnotation::Type) => Sym::NewType,
+            None => Sym::Infer,
         };
 
         let rhs = bind.rhs.map(|rhs| self.lower_expr(ast, rhs));
@@ -183,13 +169,26 @@ impl<'src> Lowerer<'src> {
                     }),
                 }
             }
-            ast::ExprKind::Literal(literal) => self.ir.exprs.push(Expr {
-                kind: ExprKind::Literal(literal),
+            ast::ExprKind::Bool(v) => self.ir.exprs.push(Expr {
+                kind: ExprKind::Bool(v),
                 span,
             }),
-            ast::ExprKind::Paren(expr) => self.lower_expr(ast, expr),
-            ast::ExprKind::Tuple(ref exprs) => {
-                unimplemented!("Tuples aren't lowered yet. ({:?})", exprs)
+            ast::ExprKind::Float(v) => self.ir.exprs.push(Expr {
+                kind: ExprKind::Float(v),
+                span,
+            }),
+            ast::ExprKind::Int(v) => self.ir.exprs.push(Expr {
+                kind: ExprKind::Int(v),
+                span,
+            }),
+            ast::ExprKind::FnType { .. } => {
+                todo!("FnType expression lowering")
+            }
+            ast::ExprKind::Fn { .. } => {
+                todo!("Fn expression lowering")
+            }
+            ast::ExprKind::Tuple(ref binds) => {
+                todo!("Tuple lowering ({:?})", binds)
             }
             ast::ExprKind::Invalid(err) => self.invalid_expr(Error {
                 kind: ErrorKind::ParserError(err),

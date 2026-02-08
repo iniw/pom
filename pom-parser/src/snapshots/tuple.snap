@@ -1,6 +1,6 @@
 ---
 source: pom-parser/src/tests.rs
-expression: "test(\"(55 + 47);\")"
+expression: "test(\"(1, 2, 3);\")"
 ---
 (
     Ast {
@@ -23,41 +23,51 @@ expression: "test(\"(55 + 47);\")"
         exprs: Arena(
             [
                 Expr {
-                    kind: Literal(
-                        Int(
-                            55,
-                        ),
+                    kind: Int(
+                        1,
                     ),
                     span: Span {
                         start: 1,
-                        end: 3,
+                        end: 2,
                     },
                 },
                 Expr {
-                    kind: Literal(
-                        Int(
-                            47,
-                        ),
+                    kind: Int(
+                        2,
                     ),
                     span: Span {
-                        start: 6,
+                        start: 4,
+                        end: 5,
+                    },
+                },
+                Expr {
+                    kind: Int(
+                        3,
+                    ),
+                    span: Span {
+                        start: 7,
                         end: 8,
                     },
                 },
                 Expr {
-                    kind: Binary {
-                        lhs: Id<Expr>(1),
-                        op: Add,
-                        rhs: Id<Expr>(2),
-                    },
-                    span: Span {
-                        start: 1,
-                        end: 8,
-                    },
-                },
-                Expr {
-                    kind: Paren(
-                        Id<Expr>(3),
+                    kind: Tuple(
+                        [
+                            Bind {
+                                lhs: Id<Expr>(1),
+                                ty: None,
+                                rhs: None,
+                            },
+                            Bind {
+                                lhs: Id<Expr>(2),
+                                ty: None,
+                                rhs: None,
+                            },
+                            Bind {
+                                lhs: Id<Expr>(3),
+                                ty: None,
+                                rhs: None,
+                            },
+                        ],
                     ),
                     span: Span {
                         start: 0,

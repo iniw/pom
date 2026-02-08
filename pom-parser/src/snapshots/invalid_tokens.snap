@@ -1,6 +1,6 @@
 ---
 source: pom-parser/src/tests.rs
-expression: "test(\"55 ^ $ 47\")"
+expression: "test(\"55 ^ 47\")"
 ---
 (
     Ast {
@@ -8,7 +8,6 @@ expression: "test(\"55 ^ $ 47\")"
             Id<Stmt>(1),
             Id<Stmt>(2),
             Id<Stmt>(3),
-            Id<Stmt>(4),
         ],
         stmts: Arena(
             [
@@ -36,16 +35,7 @@ expression: "test(\"55 ^ $ 47\")"
                     ),
                     span: Span {
                         start: 5,
-                        end: 6,
-                    },
-                },
-                Stmt {
-                    kind: Expr(
-                        Id<Expr>(4),
-                    ),
-                    span: Span {
-                        start: 7,
-                        end: 9,
+                        end: 7,
                     },
                 },
             ],
@@ -53,10 +43,8 @@ expression: "test(\"55 ^ $ 47\")"
         exprs: Arena(
             [
                 Expr {
-                    kind: Literal(
-                        Int(
-                            55,
-                        ),
+                    kind: Int(
+                        55,
                     ),
                     span: Span {
                         start: 0,
@@ -73,23 +61,12 @@ expression: "test(\"55 ^ $ 47\")"
                     },
                 },
                 Expr {
-                    kind: Invalid(
-                        Id<Error>(3),
+                    kind: Int(
+                        47,
                     ),
                     span: Span {
                         start: 5,
-                        end: 6,
-                    },
-                },
-                Expr {
-                    kind: Literal(
-                        Int(
-                            47,
-                        ),
-                    ),
-                    span: Span {
-                        start: 7,
-                        end: 9,
+                        end: 7,
                     },
                 },
             ],
@@ -120,7 +97,9 @@ expression: "test(\"55 ^ $ 47\")"
             Error {
                 kind: UnexpectedToken {
                     wanted: [
+                        At,
                         Bool,
+                        Dollar,
                         Float,
                         Ident,
                         Int,
@@ -145,31 +124,6 @@ expression: "test(\"55 ^ $ 47\")"
             Error {
                 kind: UnexpectedToken {
                     wanted: [
-                        Bool,
-                        Float,
-                        Ident,
-                        Int,
-                        LBrace,
-                        LParen,
-                    ],
-                    got: Token {
-                        kind: Invalid(
-                            UnknownToken,
-                        ),
-                        span: Span {
-                            start: 5,
-                            end: 6,
-                        },
-                    },
-                },
-                span: Span {
-                    start: 3,
-                    end: 4,
-                },
-            },
-            Error {
-                kind: UnexpectedToken {
-                    wanted: [
                         Semicolon,
                     ],
                     got: Token {
@@ -181,8 +135,8 @@ expression: "test(\"55 ^ $ 47\")"
                     },
                 },
                 span: Span {
-                    start: 7,
-                    end: 9,
+                    start: 5,
+                    end: 7,
                 },
             },
         ],

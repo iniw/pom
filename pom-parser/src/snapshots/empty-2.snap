@@ -39,7 +39,9 @@ expression: "test(\";\")"
             Error {
                 kind: UnexpectedToken {
                     wanted: [
+                        At,
                         Bool,
+                        Dollar,
                         Float,
                         Ident,
                         Int,

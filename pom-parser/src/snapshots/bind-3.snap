@@ -13,8 +13,10 @@ expression: "test(\"var: u32 = 47;\")"
                     kind: Bind(
                         Bind {
                             lhs: Id<Expr>(1),
-                            ty: Expr(
-                                Id<Expr>(2),
+                            ty: Some(
+                                Expr(
+                                    Id<Expr>(2),
+                                ),
                             ),
                             rhs: Some(
                                 Id<Expr>(3),
@@ -45,10 +47,8 @@ expression: "test(\"var: u32 = 47;\")"
                     },
                 },
                 Expr {
-                    kind: Literal(
-                        Int(
-                            47,
-                        ),
+                    kind: Int(
+                        47,
                     ),
                     span: Span {
                         start: 11,

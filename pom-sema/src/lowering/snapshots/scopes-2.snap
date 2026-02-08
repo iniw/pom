@@ -41,11 +41,8 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := 55;\n\"#)"
                     },
                 },
                 Stmt {
-                    kind: Block(
-                        [
-                            Id<Stmt>(1),
-                            Id<Stmt>(2),
-                        ],
+                    kind: Expr(
+                        Id<Expr>(7),
                     ),
                     span: Span {
                         start: 1,
@@ -56,9 +53,9 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := 55;\n\"#)"
                     kind: Bind(
                         Bind {
                             sym: Id<Sym>(6),
-                            lhs: Id<Expr>(8),
+                            lhs: Id<Expr>(9),
                             rhs: Some(
-                                Id<Expr>(7),
+                                Id<Expr>(8),
                             ),
                         },
                     ),
@@ -72,10 +69,8 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := 55;\n\"#)"
         exprs: Arena(
             [
                 Expr {
-                    kind: Literal(
-                        Int(
-                            55,
-                        ),
+                    kind: Int(
+                        55,
                     ),
                     span: Span {
                         start: 12,
@@ -130,10 +125,20 @@ expression: "test(r#\"\n{\n    a := 55;\n    b := a + a;\n}\na := 55;\n\"#)"
                     },
                 },
                 Expr {
-                    kind: Literal(
-                        Int(
-                            55,
-                        ),
+                    kind: Block(
+                        [
+                            Id<Stmt>(1),
+                            Id<Stmt>(2),
+                        ],
+                    ),
+                    span: Span {
+                        start: 1,
+                        end: 33,
+                    },
+                },
+                Expr {
+                    kind: Int(
+                        55,
                     ),
                     span: Span {
                         start: 39,

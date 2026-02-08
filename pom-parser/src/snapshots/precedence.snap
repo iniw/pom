@@ -1,14 +1,23 @@
 ---
 source: pom-parser/src/tests.rs
-expression: "test(\"(1 + 1) / 2 * 3 + 1;\")"
+expression: "test(\"{1 + 1} / 2 * 3 + 1;\")"
 ---
 (
     Ast {
         items: [
-            Id<Stmt>(1),
+            Id<Stmt>(2),
         ],
         stmts: Arena(
             [
+                Stmt {
+                    kind: Expr(
+                        Id<Expr>(3),
+                    ),
+                    span: Span {
+                        start: 1,
+                        end: 6,
+                    },
+                },
                 Stmt {
                     kind: Expr(
                         Id<Expr>(10),
@@ -23,10 +32,8 @@ expression: "test(\"(1 + 1) / 2 * 3 + 1;\")"
         exprs: Arena(
             [
                 Expr {
-                    kind: Literal(
-                        Int(
-                            1,
-                        ),
+                    kind: Int(
+                        1,
                     ),
                     span: Span {
                         start: 1,
@@ -34,10 +41,8 @@ expression: "test(\"(1 + 1) / 2 * 3 + 1;\")"
                     },
                 },
                 Expr {
-                    kind: Literal(
-                        Int(
-                            1,
-                        ),
+                    kind: Int(
+                        1,
                     ),
                     span: Span {
                         start: 5,
@@ -56,8 +61,10 @@ expression: "test(\"(1 + 1) / 2 * 3 + 1;\")"
                     },
                 },
                 Expr {
-                    kind: Paren(
-                        Id<Expr>(3),
+                    kind: Block(
+                        [
+                            Id<Stmt>(1),
+                        ],
                     ),
                     span: Span {
                         start: 0,
@@ -65,10 +72,8 @@ expression: "test(\"(1 + 1) / 2 * 3 + 1;\")"
                     },
                 },
                 Expr {
-                    kind: Literal(
-                        Int(
-                            2,
-                        ),
+                    kind: Int(
+                        2,
                     ),
                     span: Span {
                         start: 10,
@@ -87,10 +92,8 @@ expression: "test(\"(1 + 1) / 2 * 3 + 1;\")"
                     },
                 },
                 Expr {
-                    kind: Literal(
-                        Int(
-                            3,
-                        ),
+                    kind: Int(
+                        3,
                     ),
                     span: Span {
                         start: 14,
@@ -109,10 +112,8 @@ expression: "test(\"(1 + 1) / 2 * 3 + 1;\")"
                     },
                 },
                 Expr {
-                    kind: Literal(
-                        Int(
-                            1,
-                        ),
+                    kind: Int(
+                        1,
                     ),
                     span: Span {
                         start: 18,

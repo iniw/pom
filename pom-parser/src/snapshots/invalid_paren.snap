@@ -33,10 +33,8 @@ expression: "test(\"(55 + 47;;\")"
         exprs: Arena(
             [
                 Expr {
-                    kind: Literal(
-                        Int(
-                            55,
-                        ),
+                    kind: Int(
+                        55,
                     ),
                     span: Span {
                         start: 1,
@@ -44,10 +42,8 @@ expression: "test(\"(55 + 47;;\")"
                     },
                 },
                 Expr {
-                    kind: Literal(
-                        Int(
-                            47,
-                        ),
+                    kind: Int(
+                        47,
                     ),
                     span: Span {
                         start: 6,
@@ -66,8 +62,14 @@ expression: "test(\"(55 + 47;;\")"
                     },
                 },
                 Expr {
-                    kind: Paren(
-                        Id<Expr>(3),
+                    kind: Tuple(
+                        [
+                            Bind {
+                                lhs: Id<Expr>(3),
+                                ty: None,
+                                rhs: None,
+                            },
+                        ],
                     ),
                     span: Span {
                         start: 0,
@@ -109,7 +111,9 @@ expression: "test(\"(55 + 47;;\")"
             Error {
                 kind: UnexpectedToken {
                     wanted: [
+                        At,
                         Bool,
+                        Dollar,
                         Float,
                         Ident,
                         Int,

@@ -1,7 +1,6 @@
 use pom_utils::arena::{Arena, Id};
 
 use crate::{
-    ast,
     ir::{
         Data, Ir, Kind, Sym, Type, TypeCtor,
         expr::{Expr, ExprKind},
@@ -159,11 +158,9 @@ impl TypeChecker {
                     panic!("BUG: Symbol should've already been resolved - {sym:#?} - {expr:#?}")
                 }
             },
-            ExprKind::Literal(literal) => match literal {
-                ast::Literal::Bool(_) => Type::Data(Data::Type(TypeCtor::Bool)),
-                ast::Literal::Int(_) => Type::Data(Data::Type(TypeCtor::I32)),
-                ast::Literal::Float(_) => Type::Data(Data::Type(TypeCtor::F32)),
-            },
+            ExprKind::Bool(_) => Type::Data(Data::Type(TypeCtor::Bool)),
+            ExprKind::Float(_) => Type::Data(Data::Type(TypeCtor::F32)),
+            ExprKind::Int(_) => Type::Data(Data::Type(TypeCtor::I32)),
             ref expr => todo!("{expr:#?}"),
         }
     }

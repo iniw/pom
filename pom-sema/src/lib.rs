@@ -10,6 +10,7 @@ pub mod ir;
 mod lowering;
 mod typecheck;
 
+/// Runs semantic analysis: lowering (AST → IR with scope resolution) then typechecking.
 pub fn analyse(src: &str, ast: Ast) -> (Ir, LoweringErrors, TypecheckErrors) {
     let (mut ir, lowering_errors) = lower(src, ast);
 
@@ -22,12 +23,11 @@ mod ast {
     use pom_parser::ast::{expr, stmt};
 
     pub type Bind = stmt::Bind;
-    pub type BindKind = stmt::TypeAnnotation;
+    pub type TypeAnnotation = stmt::TypeAnnotation;
     pub type Stmt = stmt::Stmt;
     pub type StmtKind = stmt::StmtKind;
 
     pub type BinaryOp = expr::BinaryOp;
     pub type Expr = expr::Expr;
     pub type ExprKind = expr::ExprKind;
-    pub type Literal = expr::Literal;
 }

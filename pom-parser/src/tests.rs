@@ -15,7 +15,7 @@ fn empty() {
 
 #[test]
 fn precedence() {
-    snap!(test("(1 + 1) / 2 * 3 + 1;"));
+    snap!(test("{1 + 1} / 2 * 3 + 1;"));
 }
 
 #[test]
@@ -28,31 +28,14 @@ fn bind() {
 }
 
 #[test]
-fn bind_fn() {
-    snap!(test("f: fn = {};"));
-    snap!(test("f: fn () = {};"));
-    snap!(test("f: fn (x: u32) = x;"));
-    snap!(test("f: fn (a: u32 = 55) = {};"));
+fn block() {
+    snap!(test("{55 + 47; 1 * 1;};"));
+    snap!(test("{55 + 47;};"));
+    snap!(test("{};"));
 }
 
 #[test]
-fn invalid_bind_fn() {
-    snap!(test("f: fn (a: i32) = ;"));
-    snap!(test("f: fn (a := 55;"));
-    snap!(test("f: fn (a = 55;"));
-    snap!(test("f: fn (x) = x;"));
-    snap!(test("f: fn (x = 55) = x;"));
-}
-
-#[test]
-fn block_stmt() {
-    snap!(test("{55 + 47; 1 * 1;}"));
-    snap!(test("{55 + 47;}"));
-    snap!(test("{}"));
-}
-
-#[test]
-fn invalid_block_stmt() {
+fn invalid_block() {
     snap!(test("{55 + 47;;"));
     snap!(test("{55 + 47;"));
     snap!(test("{55 + 47"));
@@ -63,9 +46,11 @@ fn invalid_block_stmt() {
 }
 
 #[test]
-fn paren() {
-    snap!(test("(55 + 47);"));
-    snap!(test("(10);"));
+fn tuple() {
+    snap!(test("(1, 2, 3);"));
+    snap!(test("(1,);"));
+    snap!(test("(1);"));
+    snap!(test("(foo: i32, bar: f32);"));
     snap!(test("();"));
 }
 
@@ -90,5 +75,40 @@ fn call() {
 
 #[test]
 fn invalid_tokens() {
-    snap!(test("55 ^ $ 47"));
+    snap!(test("55 ^ 47"));
+}
+
+#[test]
+fn fn_expr() {
+    snap!(test("@() {};"));
+    snap!(test("@(x: i32) x;"));
+    snap!(test("@(x: i32) -> i32 x;"));
+    snap!(test("$(x) x;"));
+}
+
+#[test]
+fn bare_params() {
+    snap!(test("@(x) x;"));
+    snap!(test("@(x, y) x;"));
+}
+
+#[test]
+fn arrow_types() {
+    snap!(test("foo: (i32) -> i32 = @(x) x;"));
+    snap!(test("(i32) -> (i32) -> i32;"));
+    // Arrow is right-associative: a -> b -> c parses as a -> (b -> c)
+    snap!(test("(i32) -> (i32) -> (i32) -> i32;"));
+    // Function returning a function
+    snap!(test("@(x: i32) -> (i32) -> i32 @(y: i32) x;"));
+}
+
+#[test]
+fn block_grouping() {
+    snap!(test("{1 + 1} / 2 * 3 + 1;"));
+}
+
+#[test]
+fn tail_expr() {
+    snap!(test("{1 + 1}"));
+    snap!(test("{a := 5; a + 1}"));
 }

@@ -33,5 +33,10 @@ fn operators() {
 
 #[test]
 fn errors() {
-    snap!(lex("55 ^ $ 47"));
+    snap!(lex("55 ^ 47"));
+}
+
+#[test]
+fn sigils() {
+    snap!(lex("$ @ ->"));
 }

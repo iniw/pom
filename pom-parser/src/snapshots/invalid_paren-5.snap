@@ -32,8 +32,14 @@ expression: "test(\"(;\")"
                     },
                 },
                 Expr {
-                    kind: Paren(
-                        Id<Expr>(1),
+                    kind: Tuple(
+                        [
+                            Bind {
+                                lhs: Id<Expr>(1),
+                                ty: None,
+                                rhs: None,
+                            },
+                        ],
                     ),
                     span: Span {
                         start: 0,
@@ -48,7 +54,9 @@ expression: "test(\"(;\")"
             Error {
                 kind: UnexpectedToken {
                     wanted: [
+                        At,
                         Bool,
+                        Dollar,
                         Float,
                         Ident,
                         Int,

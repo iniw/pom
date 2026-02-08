@@ -1,0 +1,134 @@
+---
+source: pom-parser/src/tests.rs
+expression: "test(\"(i32) -> (i32) -> (i32) -> i32;\")"
+---
+(
+    Ast {
+        items: [
+            Id<Stmt>(1),
+        ],
+        stmts: Arena(
+            [
+                Stmt {
+                    kind: Expr(
+                        Id<Expr>(10),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 31,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 1,
+                        end: 4,
+                    },
+                },
+                Expr {
+                    kind: Tuple(
+                        [
+                            Bind {
+                                lhs: Id<Expr>(1),
+                                ty: None,
+                                rhs: None,
+                            },
+                        ],
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 5,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 10,
+                        end: 13,
+                    },
+                },
+                Expr {
+                    kind: Tuple(
+                        [
+                            Bind {
+                                lhs: Id<Expr>(3),
+                                ty: None,
+                                rhs: None,
+                            },
+                        ],
+                    ),
+                    span: Span {
+                        start: 9,
+                        end: 14,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 19,
+                        end: 22,
+                    },
+                },
+                Expr {
+                    kind: Tuple(
+                        [
+                            Bind {
+                                lhs: Id<Expr>(5),
+                                ty: None,
+                                rhs: None,
+                            },
+                        ],
+                    ),
+                    span: Span {
+                        start: 18,
+                        end: 23,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 27,
+                        end: 30,
+                    },
+                },
+                Expr {
+                    kind: FnType {
+                        lhs: Id<Expr>(6),
+                        rhs: Id<Expr>(7),
+                    },
+                    span: Span {
+                        start: 18,
+                        end: 30,
+                    },
+                },
+                Expr {
+                    kind: FnType {
+                        lhs: Id<Expr>(4),
+                        rhs: Id<Expr>(8),
+                    },
+                    span: Span {
+                        start: 9,
+                        end: 30,
+                    },
+                },
+                Expr {
+                    kind: FnType {
+                        lhs: Id<Expr>(2),
+                        rhs: Id<Expr>(9),
+                    },
+                    span: Span {
+                        start: 0,
+                        end: 30,
+                    },
+                },
+            ],
+        ),
+    },
+    Arena(
+        [],
+    ),
+)

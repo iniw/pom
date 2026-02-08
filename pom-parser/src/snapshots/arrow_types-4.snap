@@ -1,0 +1,151 @@
+---
+source: pom-parser/src/tests.rs
+expression: "test(\"@(x: i32) -> (i32) -> i32 @(y: i32) x;\")"
+---
+(
+    Ast {
+        items: [
+            Id<Stmt>(1),
+        ],
+        stmts: Arena(
+            [
+                Stmt {
+                    kind: Expr(
+                        Id<Expr>(11),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 38,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 2,
+                        end: 3,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 5,
+                        end: 8,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 14,
+                        end: 17,
+                    },
+                },
+                Expr {
+                    kind: Tuple(
+                        [
+                            Bind {
+                                lhs: Id<Expr>(3),
+                                ty: None,
+                                rhs: None,
+                            },
+                        ],
+                    ),
+                    span: Span {
+                        start: 13,
+                        end: 18,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 22,
+                        end: 25,
+                    },
+                },
+                Expr {
+                    kind: FnType {
+                        lhs: Id<Expr>(4),
+                        rhs: Id<Expr>(5),
+                    },
+                    span: Span {
+                        start: 13,
+                        end: 25,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 28,
+                        end: 29,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 31,
+                        end: 34,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 36,
+                        end: 37,
+                    },
+                },
+                Expr {
+                    kind: Fn {
+                        kind: Static,
+                        params: [
+                            Bind {
+                                lhs: Id<Expr>(7),
+                                ty: Some(
+                                    Expr(
+                                        Id<Expr>(8),
+                                    ),
+                                ),
+                                rhs: None,
+                            },
+                        ],
+                        ret: None,
+                        body: Id<Expr>(9),
+                    },
+                    span: Span {
+                        start: 26,
+                        end: 37,
+                    },
+                },
+                Expr {
+                    kind: Fn {
+                        kind: Static,
+                        params: [
+                            Bind {
+                                lhs: Id<Expr>(1),
+                                ty: Some(
+                                    Expr(
+                                        Id<Expr>(2),
+                                    ),
+                                ),
+                                rhs: None,
+                            },
+                        ],
+                        ret: Some(
+                            Id<Expr>(6),
+                        ),
+                        body: Id<Expr>(10),
+                    },
+                    span: Span {
+                        start: 0,
+                        end: 37,
+                    },
+                },
+            ],
+        ),
+    },
+    Arena(
+        [],
+    ),
+)

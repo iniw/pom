@@ -1,6 +1,6 @@
 ---
 source: pom-parser/src/tests.rs
-expression: "test(\"{}\")"
+expression: "test(\"{};\")"
 ---
 (
     Ast {
@@ -10,6 +10,19 @@ expression: "test(\"{}\")"
         stmts: Arena(
             [
                 Stmt {
+                    kind: Expr(
+                        Id<Expr>(1),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 3,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [
+                Expr {
                     kind: Block(
                         [],
                     ),
@@ -19,9 +32,6 @@ expression: "test(\"{}\")"
                     },
                 },
             ],
-        ),
-        exprs: Arena(
-            [],
         ),
     },
     Arena(

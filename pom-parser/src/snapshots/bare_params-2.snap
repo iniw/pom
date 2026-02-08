@@ -1,0 +1,75 @@
+---
+source: pom-parser/src/tests.rs
+expression: "test(\"@(x, y) x;\")"
+---
+(
+    Ast {
+        items: [
+            Id<Stmt>(1),
+        ],
+        stmts: Arena(
+            [
+                Stmt {
+                    kind: Expr(
+                        Id<Expr>(4),
+                    ),
+                    span: Span {
+                        start: 0,
+                        end: 10,
+                    },
+                },
+            ],
+        ),
+        exprs: Arena(
+            [
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 2,
+                        end: 3,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 5,
+                        end: 6,
+                    },
+                },
+                Expr {
+                    kind: Ident,
+                    span: Span {
+                        start: 8,
+                        end: 9,
+                    },
+                },
+                Expr {
+                    kind: Fn {
+                        kind: Static,
+                        params: [
+                            Bind {
+                                lhs: Id<Expr>(1),
+                                ty: None,
+                                rhs: None,
+                            },
+                            Bind {
+                                lhs: Id<Expr>(2),
+                                ty: None,
+                                rhs: None,
+                            },
+                        ],
+                        ret: None,
+                        body: Id<Expr>(3),
+                    },
+                    span: Span {
+                        start: 0,
+                        end: 9,
+                    },
+                },
+            ],
+        ),
+    },
+    Arena(
+        [],
+    ),
+)
